@@ -2097,7 +2097,6 @@ window.openEdit = function(id) {
   document.getElementById('fStatus').value           = t.status || 'waiting_return';
   document.getElementById('fComments').value         = t.comments || '';
   document.getElementById('fCustomerFeedback').value = t.customerFeedback || '';
-  document.getElementById('fPhotos').value           = '';
   document.getElementById('photosNote').textContent  = (t.photoUrls && t.photoUrls.length) ? `${t.photoUrls.length} link(s) already saved` : '';
   // Populate photo link rows
   const linksContainer = document.getElementById('fPhotoLinks');
@@ -2226,6 +2225,8 @@ window.saveEntry = async function() {
         await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
           to_email:      nc.contactEmail,
           to_name:       nc.contactName,
+          email:         nc.contactEmail,
+          name:          nc.contactName,
           brand:         entry.brand,
           order:         entry.order,
           customer:      entry.customer,
