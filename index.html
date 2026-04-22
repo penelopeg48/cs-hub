@@ -8,7 +8,6 @@
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
 
 <!-- EmailJS -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
@@ -209,9 +208,30 @@ textarea { resize: vertical; min-height: 72px; }
 .view-label { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #888; }
 .view-value { font-size: 13px; color: #1a1a1a; padding: 8px 0; border-bottom: 1px solid #f0f0f0; min-height: 32px; line-height: 1.5; }
 .view-divider { grid-column: 1 / -1; border-top: 1px solid #e8e8e8; margin: 4px 0; }
-.photos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; margin-top: 8px; }
-.photo-thumb { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 2px; cursor: pointer; border: 1px solid #e8e8e8; transition: opacity 0.15s; }
-.photo-thumb:hover { opacity: 0.8; }
+.photo-links-list { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.photo-link-item {
+  display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+  background: #f5f5f3; border-radius: 2px; border: 1px solid #e8e8e8;
+}
+.photo-link-item a { font-size: 13px; color: #1a1a1a; text-decoration: none; word-break: break-all; flex: 1; }
+.photo-link-item a:hover { text-decoration: underline; }
+
+/* Photo link form rows */
+.photo-link-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.photo-link-input { flex: 1; border: 1px solid #ddd; padding: 8px 12px; font-size: 13px; border-radius: 2px; font-family: inherit; color: #1a1a1a; }
+.photo-link-input:focus { outline: none; border-color: #1a1a1a; }
+.btn-remove-link {
+  width: 28px; height: 28px; border-radius: 2px; border: 1px solid #e8e8e8;
+  background: #fff; cursor: pointer; font-size: 16px; color: #999; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; transition: all 0.1s;
+}
+.btn-remove-link:hover { background: #fee2e2; border-color: #fca5a5; color: #991b1b; }
+.btn-add-link {
+  font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  padding: 6px 14px; border-radius: 2px; cursor: pointer; border: 1.5px dashed #ccc;
+  background: transparent; color: #888; transition: all 0.15s; margin-top: 2px; font-family: Arial, sans-serif;
+}
+.btn-add-link:hover { border-color: #1a1a1a; color: #1a1a1a; }
 
 /* Lightbox */
 .lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 2000; align-items: center; justify-content: center; }
@@ -683,8 +703,13 @@ textarea { resize: vertical; min-height: 72px; }
       </div>
 
       <div class="form-group full" id="photoUploadGroup">
-        <label>Photos (optional)</label>
-        <input type="file" id="fPhotos" multiple accept="image/*">
+        <label>Photo Links (optional)</label>
+        <div id="fPhotoLinks">
+          <div class="photo-link-row">
+            <input type="url" class="photo-link-input" placeholder="Paste OneDrive or SharePoint link here…">
+          </div>
+        </div>
+        <button type="button" class="btn-add-link" onclick="addPhotoLinkRow()">+ Add another link</button>
         <span class="field-note" id="photosNote"></span>
       </div>
     </div>
@@ -722,12 +747,6 @@ textarea { resize: vertical; min-height: 72px; }
       <button class="btn btn-primary" style="background:#991b1b;" onclick="confirmDelete()">Delete</button>
     </div>
   </div>
-</div>
-
-<!-- Lightbox -->
-<div class="lightbox" id="lightbox" onclick="closeLightbox()">
-  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
-  <img id="lightboxImg" src="" alt="">
 </div>
 
 <!-- Toast -->
@@ -1634,22 +1653,21 @@ textarea { resize: vertical; min-height: 72px; }
 // Project: returns-tracker-g48
 // ══════════════════════════════════════
 const firebaseConfig = {
-  apiKey: "REPLACE_WITH_YOUR_API_KEY",
+  apiKey: "AIzaSyDLxoo4Ln4LBJEMyIZ3HxQDjAnXRyJudNA",
   authDomain: "returns-tracker-g48.firebaseapp.com",
   databaseURL: "https://returns-tracker-g48-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "returns-tracker-g48",
-  storageBucket: "returns-tracker-g48.appspot.com",
-  messagingSenderId: "REPLACE_WITH_MESSAGING_SENDER_ID",
-  appId: "REPLACE_WITH_APP_ID"
+  storageBucket: "returns-tracker-g48.firebasestorage.app",
+  messagingSenderId: "1046058866992",
+  appId: "1:1046058866992:web:57d264f193f372e46ed0f5"
 };
 
 // Firebase initialised defensively — app works without credentials (no cloud sync)
-let db, storage, dbRef, firebaseReady = false;
+let db, dbRef, firebaseReady = false;
 try {
   firebase.initializeApp(firebaseConfig);
-  db      = firebase.database();
-  storage = firebase.storage();
-  dbRef   = db.ref('tickets_v2');
+  db    = firebase.database();
+  dbRef = db.ref('tickets_v2');
   firebaseReady = true;
 } catch(e) {
   console.warn('Firebase not configured — running in local-only mode.', e);
@@ -1661,9 +1679,9 @@ try {
 // Sign up at emailjs.com → create service + template
 // Template variables: {{to_name}}, {{brand}}, {{order}}, {{customer}}, {{amount}}, {{status}}, {{return_type}}
 // ══════════════════════════════════════
-const EMAILJS_PUBLIC_KEY  = 'REPLACE_WITH_YOUR_EMAILJS_PUBLIC_KEY';
-const EMAILJS_SERVICE_ID  = 'REPLACE_WITH_YOUR_SERVICE_ID';
-const EMAILJS_TEMPLATE_ID = 'REPLACE_WITH_YOUR_TEMPLATE_ID';
+const EMAILJS_PUBLIC_KEY  = 'ZjO-dbOjjX4bo33Qd';
+const EMAILJS_SERVICE_ID  = 'service_xkf9wbu';
+const EMAILJS_TEMPLATE_ID = 'ak01fsp';
 
 try { emailjs.init(EMAILJS_PUBLIC_KEY); } catch(e) {}
 
@@ -1862,6 +1880,28 @@ function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
+// ══════════════════════════════════════
+// PHOTO LINKS
+// ══════════════════════════════════════
+window.addPhotoLinkRow = function() {
+  const container = document.getElementById('fPhotoLinks');
+  const row = document.createElement('div');
+  row.className = 'photo-link-row';
+  row.innerHTML = `
+    <input type="url" class="photo-link-input" placeholder="Paste OneDrive or SharePoint link here…">
+    <button type="button" class="btn-remove-link" onclick="removePhotoLinkRow(this)">✕</button>`;
+  container.appendChild(row);
+  row.querySelector('input').focus();
+};
+
+window.removePhotoLinkRow = function(btn) {
+  const row = btn.closest('.photo-link-row');
+  const container = document.getElementById('fPhotoLinks');
+  // Always keep at least one row
+  if (container.querySelectorAll('.photo-link-row').length > 1) row.remove();
+  else row.querySelector('input').value = '';
+};
+
 function showToast(msg, type = '') {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -2058,7 +2098,18 @@ window.openEdit = function(id) {
   document.getElementById('fComments').value         = t.comments || '';
   document.getElementById('fCustomerFeedback').value = t.customerFeedback || '';
   document.getElementById('fPhotos').value           = '';
-  document.getElementById('photosNote').textContent  = (t.photoUrls && t.photoUrls.length) ? `${t.photoUrls.length} photo(s) already attached` : '';
+  document.getElementById('photosNote').textContent  = (t.photoUrls && t.photoUrls.length) ? `${t.photoUrls.length} link(s) already saved` : '';
+  // Populate photo link rows
+  const linksContainer = document.getElementById('fPhotoLinks');
+  if (t.photoUrls && t.photoUrls.length) {
+    linksContainer.innerHTML = t.photoUrls.map(url => `
+      <div class="photo-link-row">
+        <input type="url" class="photo-link-input" value="${url}" placeholder="Paste OneDrive or SharePoint link here…">
+        <button type="button" class="btn-remove-link" onclick="removePhotoLinkRow(this)">✕</button>
+      </div>`).join('');
+  } else {
+    linksContainer.innerHTML = '<div class="photo-link-row"><input type="url" class="photo-link-input" placeholder="Paste OneDrive or SharePoint link here…"></div>';
+  }
 
   onReturnTypeChange();
   onResolutionChange();
@@ -2081,8 +2132,10 @@ function clearForm() {
   document.getElementById('fResolution').value     = 'Pending Decision';
   document.getElementById('fReplacementSku').value = '';
   document.getElementById('fStatus').value         = 'waiting_return';
-  document.getElementById('fPhotos').value         = '';
+  document.getElementById('fPhotos') && (document.getElementById('fPhotos').value = '');
   document.getElementById('photosNote').textContent = '';
+  // Reset photo links to single empty row
+  document.getElementById('fPhotoLinks').innerHTML = '<div class="photo-link-row"><input type="url" class="photo-link-input" placeholder="Paste OneDrive or SharePoint link here…"></div>';
   ['faultDescGroup','returnRequiredGroup','reasonGroup','replacementSkuGroup'].forEach(id => {
     document.getElementById(id).classList.remove('visible');
   });
@@ -2104,24 +2157,12 @@ window.saveEntry = async function() {
   }
 
   const id = editingId || uid();
-  let photoUrls = [];
 
-  // Upload photos to Firebase Storage
-  const photoInput = document.getElementById('fPhotos');
-  if (photoInput.files && photoInput.files.length > 0) {
-    showToast('Uploading photos…');
-    for (const file of photoInput.files) {
-      try {
-        const ref = storage.ref(`tickets/${id}/${Date.now()}_${file.name}`);
-        await ref.put(file);
-        const url = await ref.getDownloadURL();
-        photoUrls.push(url);
-      } catch(e) { console.error('Photo upload failed', e); }
-    }
-  } else if (editingId) {
-    const existing = tickets.find(t => t.id === editingId);
-    photoUrls = existing ? (existing.photoUrls || []) : [];
-  }
+  // Collect photo links from the dynamic input rows
+  const linkInputs = document.querySelectorAll('#fPhotoLinks .photo-link-input');
+  let photoUrls = Array.from(linkInputs)
+    .map(i => i.value.trim())
+    .filter(v => v !== '');
 
   // Collect selected notify contacts from checkboxes
   const checkedBoxes = document.querySelectorAll('#fNotifyContactsList input[type="checkbox"]:checked');
@@ -2214,9 +2255,11 @@ window.openView = function(id) {
 
   let photosHtml = '';
   if (t.photoUrls && t.photoUrls.length) {
-    photosHtml = `<div class="photos-grid">${t.photoUrls.map(url =>
-      `<img class="photo-thumb" src="${url}" onclick="openLightbox('${url}')" alt="Ticket photo">`
-    ).join('')}</div>`;
+    photosHtml = `<div class="photo-links-list">${t.photoUrls.map((url, i) => `
+      <div class="photo-link-item">
+        <span>🔗</span>
+        <a href="${url}" target="_blank" rel="noopener">Photo ${i + 1} — ${url}</a>
+      </div>`).join('')}</div>`;
   } else {
     photosHtml = '<span style="font-size:12px;color:#aaa;">No photos attached</span>';
   }
@@ -2315,17 +2358,6 @@ window.confirmContactAction = async function(ticketId, contactId) {
   showToast('Action confirmed ✓', 'success');
   // Re-open view to refresh the UI
   setTimeout(() => openView(ticketId), 300);
-};
-
-// ══════════════════════════════════════
-// LIGHTBOX
-// ══════════════════════════════════════
-window.openLightbox = function(url) {
-  document.getElementById('lightboxImg').src = url;
-  document.getElementById('lightbox').classList.add('open');
-};
-window.closeLightbox = function() {
-  document.getElementById('lightbox').classList.remove('open');
 };
 
 // ══════════════════════════════════════
