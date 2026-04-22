@@ -1686,28 +1686,53 @@ const EMAILJS_TEMPLATE_ID = 'template_dsr4thf';
 try { emailjs.init(EMAILJS_PUBLIC_KEY); } catch(e) {}
 
 // ══════════════════════════════════════
-// CONTACTS — declared early so all functions below can use `contacts`
+// CONTACTS — synced via Firebase for all users
 // ══════════════════════════════════════
-const CONTACTS_KEY = 'cs_hub_contacts_v1';
 let contacts = [];
 let editingContactId  = null;
 let deletingContactId = null;
-
-const NOTIFY_TRIGGER_LABELS = {
-  '':                        'Not linked',
-  'refund_pending':          'Refund Pending',
-  'replacement_in_progress': 'Replacement in Progress',
-  'contact_required':        'Contact Required',
-  'all_status_changes':      'All Status Changes',
-};
+const contactsRef = () => firebaseReady ? db.ref('contacts_v1') : null;
 
 function contactsLoad() {
-  try { contacts = JSON.parse(localStorage.getItem(CONTACTS_KEY) || '[]'); } catch(e) { contacts = []; }
-  renderContacts();
+  if (firebaseReady) {
+    db.ref('contacts_v1').on('value', snap => {
+      const data = snap.val() || {};
+      contacts = Object.values(data).filter(Boolean);
+      contacts.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      renderContacts();
+      // Re-render notify checkboxes if form is open
+      const formOpen = document.getElementById('formModal').classList.contains('open');
+      if (formOpen) {
+        const selectedIds = Array.from(document.querySelectorAll('#fNotifyContactsList input[type="checkbox"]:checked')).map(cb => cb.value);
+        renderNotifyContactsForm(selectedIds);
+      }
+    });
+  } else {
+    // Fallback to localStorage
+    try { contacts = JSON.parse(localStorage.getItem('cs_hub_contacts_v1') || '[]'); } catch(e) { contacts = []; }
+    renderContacts();
+  }
 }
 
-function contactsSave() {
-  try { localStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts)); } catch(e) {}
+async function contactsSave(contact) {
+  if (firebaseReady) {
+    await db.ref('contacts_v1/' + contact.id).set(contact);
+  } else {
+    const idx = contacts.findIndex(c => c.id === contact.id);
+    if (idx > -1) contacts[idx] = contact; else contacts.push(contact);
+    try { localStorage.setItem('cs_hub_contacts_v1', JSON.stringify(contacts)); } catch(e) {}
+    renderContacts();
+  }
+}
+
+async function contactsDelete(id) {
+  if (firebaseReady) {
+    await db.ref('contacts_v1/' + id).remove();
+  } else {
+    contacts = contacts.filter(c => c.id !== id);
+    try { localStorage.setItem('cs_hub_contacts_v1', JSON.stringify(contacts)); } catch(e) {}
+    renderContacts();
+  }
 }
 
 function escHtml(str) {
@@ -1778,7 +1803,7 @@ window.closeContactModal = function() {
   editingContactId = null;
 };
 
-window.saveContact = function() {
+window.saveContact = async function() {
   const role  = document.getElementById('cRole').value.trim();
   const name  = document.getElementById('cName').value.trim();
   const email = document.getElementById('cEmail').value.trim();
@@ -1787,14 +1812,8 @@ window.saveContact = function() {
     showToast('Role, Name and Email are required.', 'error');
     return;
   }
-  if (editingContactId) {
-    const idx = contacts.findIndex(x => x.id === editingContactId);
-    if (idx > -1) contacts[idx] = { id: editingContactId, role, name, email };
-  } else {
-    contacts.push({ id: uid(), role, name, email });
-  }
-  contactsSave();
-  renderContacts();
+  const contact = { id: editingContactId || uid(), role, name, email };
+  await contactsSave(contact);
   window.closeContactModal();
   showToast('Contact saved!', 'success');
 };
@@ -1807,17 +1826,15 @@ window.closeConfirmContact = function() {
   document.getElementById('confirmContactModal').classList.remove('open');
   deletingContactId = null;
 };
-window.confirmDeleteContact = function() {
-  contacts = contacts.filter(c => c.id !== deletingContactId);
-  contactsSave();
-  renderContacts();
+window.confirmDeleteContact = async function() {
+  await contactsDelete(deletingContactId);
   window.closeConfirmContact();
   showToast('Contact deleted.');
 };
 
-// Helper for future use: returns contacts that should be notified for a given status key
-window.getContactsByTrigger = function(triggerKey) {
-  return contacts.filter(c => c.notifyTrigger === triggerKey || c.notifyTrigger === 'all_status_changes');
+// Helper: returns all contacts (for future use with trigger-based notifications)
+window.getContactsByTrigger = function() {
+  return contacts;
 };
 
 ['contactModal','confirmContactModal'].forEach(id => {
@@ -2421,7 +2438,6 @@ window.switchPage = function(page) {
 // ══════════════════════════════════════
 // PROCESS FLOWS JS
 // ══════════════════════════════════════
-const PF_STORAGE_KEY = 'process_flows_v1';
 let pfCurrentBrand = 'colette';
 let pfInitialized  = false;
 
@@ -2491,20 +2507,43 @@ function pfOpenResolution(brand, type) {
   if (sf)  { sf.classList.add('open'); setTimeout(() => sf.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80); }
 }
 
-// ── Persist process flows templates/notes in localStorage ──
+// ── Process flows templates — synced via Firebase ──
 function pfSave() {
-  const data = {};
-  document.querySelectorAll('#page-flows textarea[data-key]').forEach(ta => {
-    data[ta.dataset.key] = ta.value;
-  });
-  try { localStorage.setItem(PF_STORAGE_KEY, JSON.stringify(data)); } catch(e) {}
+  if (!firebaseReady) {
+    // Fallback to localStorage
+    const data = {};
+    document.querySelectorAll('#page-flows textarea[data-key]').forEach(ta => {
+      data[ta.dataset.key] = ta.value;
+    });
+    try { localStorage.setItem('process_flows_v1', JSON.stringify(data)); } catch(e) {}
+    return;
+  }
+  // Debounce Firebase writes to avoid too many requests while typing
+  clearTimeout(pfSave._timer);
+  pfSave._timer = setTimeout(() => {
+    const data = {};
+    document.querySelectorAll('#page-flows textarea[data-key]').forEach(ta => {
+      if (ta.value) data[ta.dataset.key] = ta.value;
+    });
+    db.ref('flows_templates_v1').set(data).catch(e => console.error('Flows save error', e));
+  }, 1000);
 }
+
 function pfLoad() {
-  let data = {};
-  try { data = JSON.parse(localStorage.getItem(PF_STORAGE_KEY) || '{}'); } catch(e) {}
-  document.querySelectorAll('#page-flows textarea[data-key]').forEach(ta => {
-    if (ta.dataset.key in data) ta.value = data[ta.dataset.key];
-  });
+  if (firebaseReady) {
+    db.ref('flows_templates_v1').on('value', snap => {
+      const data = snap.val() || {};
+      document.querySelectorAll('#page-flows textarea[data-key]').forEach(ta => {
+        if (ta.dataset.key in data) ta.value = data[ta.dataset.key];
+      });
+    });
+  } else {
+    let data = {};
+    try { data = JSON.parse(localStorage.getItem('process_flows_v1') || '{}'); } catch(e) {}
+    document.querySelectorAll('#page-flows textarea[data-key]').forEach(ta => {
+      if (ta.dataset.key in data) ta.value = data[ta.dataset.key];
+    });
+  }
 }
 document.addEventListener('input', e => {
   if (e.target.tagName === 'TEXTAREA' && e.target.dataset.key) pfSave();
