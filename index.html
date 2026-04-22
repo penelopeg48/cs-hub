@@ -1,0 +1,2487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CS Hub — Group 48</title>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+
+<!-- EmailJS -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
+<style>
+/* ══════════════════════════════════════
+   RESET & BASE
+══════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; background: #f5f5f3; color: #1a1a1a; min-height: 100vh; }
+
+/* ══════════════════════════════════════
+   GLOBAL NAVBAR
+══════════════════════════════════════ */
+.global-header {
+  background: #1a1a1a;
+  color: #fff;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 56px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.global-header h1 { font-size: 15px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; flex: 1; }
+.header-badge {
+  font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+  background: rgba(255,255,255,0.12); border-radius: 3px; padding: 3px 8px;
+}
+.nav-btns { display: flex; gap: 0; }
+.nav-btn {
+  padding: 0 20px; height: 56px; font-size: 11px; font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase; cursor: pointer;
+  color: rgba(255,255,255,0.5); border: none; background: none;
+  border-bottom: 3px solid transparent; transition: color 0.15s, border-color 0.15s;
+}
+.nav-btn:hover { color: rgba(255,255,255,0.85); }
+.nav-btn.active-tickets { color: #fff; border-bottom-color: #fff; }
+.nav-btn.active-flows-colette { color: #c07ac0; border-bottom-color: #7a3a7a; }
+.nav-btn.active-flows-tde { color: #7aabda; border-bottom-color: #1a4a7a; }
+.nav-btn.active-contacts { color: #6ee7b7; border-bottom-color: #6ee7b7; }
+
+/* ══════════════════════════════════════
+   CONTACTS PAGE
+══════════════════════════════════════ */
+.contacts-container { max-width: 900px; margin: 0 auto; padding: 32px 40px; }
+.contacts-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+.contacts-header h2 { font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #888; }
+.contacts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.contact-card {
+  background: #fff; border: 1px solid #e8e8e8; border-radius: 4px;
+  padding: 20px; display: flex; flex-direction: column; gap: 6px;
+  transition: box-shadow 0.15s;
+}
+.contact-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+.contact-role {
+  font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+  color: #888; margin-bottom: 2px;
+}
+.contact-name { font-size: 15px; font-weight: 700; color: #1a1a1a; }
+.contact-email {
+  font-size: 12px; color: #555; word-break: break-all;
+  display: flex; align-items: center; gap: 6px; margin-top: 4px;
+}
+.contact-email a { color: #555; text-decoration: none; }
+.contact-email a:hover { color: #1a1a1a; text-decoration: underline; }
+/* EmailJS badge — shown when contact is linked to a notification */
+.contact-notify-badge {
+  display: none; /* shown via JS when linked */
+  margin-top: 8px; font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: #065f46; background: #d1fae5;
+  border-radius: 20px; padding: 3px 10px; width: fit-content;
+}
+.contact-notify-badge.linked { display: block; }
+.contact-actions { display: flex; gap: 6px; margin-top: 10px; }
+.contacts-empty { text-align: center; padding: 60px; color: #aaa; font-size: 13px; letter-spacing: 1px; }
+
+/* ══════════════════════════════════════
+   PAGE PANELS
+══════════════════════════════════════ */
+.page-panel { display: none; }
+.page-panel.active { display: block; }
+
+/* ══════════════════════════════════════
+   TICKETS PAGE
+══════════════════════════════════════ */
+.tickets-container { max-width: 1700px; margin: 0 auto; padding: 32px 40px; }
+
+/* Summary Cards */
+.summary { display: flex; gap: 14px; margin-bottom: 28px; flex-wrap: wrap; }
+.card { background: #fff; border: 1px solid #e8e8e8; padding: 14px 20px; border-radius: 4px; min-width: 130px; }
+.card-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #888; margin-bottom: 6px; line-height: 1.4; }
+.card-value { font-size: 26px; font-weight: 300; }
+
+/* Toolbar */
+.toolbar { display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; align-items: center; }
+.toolbar select, .toolbar input {
+  border: 1px solid #ddd; background: #fff; padding: 8px 12px;
+  font-size: 13px; border-radius: 2px; color: #1a1a1a;
+}
+.toolbar select:focus, .toolbar input:focus { outline: none; border-color: #1a1a1a; }
+
+/* Buttons */
+.btn { padding: 9px 20px; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; border: none; cursor: pointer; border-radius: 2px; transition: background 0.15s; font-family: Arial, sans-serif; }
+.btn-primary { background: #1a1a1a; color: #fff; }
+.btn-primary:hover { background: #333; }
+.btn-outline { background: transparent; color: #1a1a1a; border: 1px solid #1a1a1a; }
+.btn-outline:hover { background: #f0f0f0; }
+.btn-sm { padding: 5px 12px; font-size: 11px; }
+.btn-toggle { background: transparent; color: #888; border: 1px solid #ddd; }
+.btn-toggle:hover { background: #f0f0f0; }
+.btn-toggle.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+.ml-auto { margin-left: auto; }
+
+/* Table */
+.table-wrap { background: #fff; border: 1px solid #e8e8e8; border-radius: 4px; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th {
+  background: #1a1a1a; color: #fff; text-align: left; padding: 12px 14px;
+  font-weight: 400; letter-spacing: 1px; font-size: 11px; text-transform: uppercase; white-space: nowrap;
+}
+tbody tr { border-bottom: 1px solid #f0f0f0; transition: background 0.1s; }
+tbody tr:hover { background: #fafafa; }
+tbody tr:last-child { border-bottom: none; }
+td { padding: 11px 14px; vertical-align: middle; }
+td.cell-comments { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: #555; }
+td.cell-email { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: #444; }
+
+/* Badges */
+.badge { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; font-weight: 600; white-space: nowrap; }
+.badge-colette { background: #f0e6f0; color: #7a3a7a; }
+.badge-tde     { background: #e6eef5; color: #1a4a7a; }
+.type-faulty    { background: #fee2e2; color: #991b1b; }
+.type-com       { background: #e0f2fe; color: #0369a1; }
+.type-unclaimed { background: #fef3c7; color: #92400e; }
+.type-wrong     { background: #ffedd5; color: #c2410c; }
+.type-other     { background: #f3f4f6; color: #6b7280; }
+.res-money       { background: #d1fae5; color: #065f46; }
+.res-replacement { background: #ede9fe; color: #6d28d9; }
+.res-credit      { background: #dbeafe; color: #1e40af; }
+.res-exchange    { background: #fce7f3; color: #9d174d; }
+.res-pending     { background: #f3f4f6; color: #6b7280; }
+.status-pill { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 500; white-space: nowrap; }
+.status-awaiting-photos         { background: #fffbeb; color: #92400e; }
+.status-waiting-return          { background: #fef9c3; color: #713f12; }
+.status-under-review            { background: #dbeafe; color: #1e40af; }
+.status-refund-pending          { background: #ffedd5; color: #c2410c; }
+.status-replacement-in-progress { background: #ede9fe; color: #6d28d9; }
+.status-contact-required        { background: #fee2e2; color: #b91c1c; }
+.status-waiting-customer-reply  { background: #f3e8ff; color: #7e22ce; }
+.status-closed                  { background: #f3f4f6; color: #6b7280; }
+.finance-note { display: block; font-size: 10px; color: #c2410c; margin-top: 4px; font-style: italic; }
+.actions { display: flex; gap: 6px; }
+.btn-icon {
+  width: 30px; height: 30px; border-radius: 2px; border: 1px solid #e8e8e8;
+  background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 14px; transition: background 0.1s;
+}
+.btn-icon:hover { background: #f5f5f3; }
+.btn-icon.btn-delete:hover { background: #fee2e2; border-color: #fca5a5; }
+
+/* Modal */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: flex-start; justify-content: center; padding: 24px 16px; overflow-y: auto; }
+.modal-overlay.open { display: flex; }
+.modal { background: #fff; width: 100%; max-width: 720px; border-radius: 4px; padding: 32px; margin: auto; }
+.modal h2 { font-size: 14px; font-weight: 400; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #e8e8e8; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group.full { grid-column: 1 / -1; }
+.form-divider { grid-column: 1 / -1; border-top: 1px solid #f0f0f0; margin: 4px 0; }
+label { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: #666; }
+input[type="text"], input[type="email"], select, textarea, input[type="file"] {
+  border: 1px solid #ddd; padding: 9px 12px; font-size: 13px; border-radius: 2px;
+  font-family: inherit; color: #1a1a1a; background: #fff; width: 100%;
+}
+input[type="file"] { padding: 7px 12px; cursor: pointer; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: #1a1a1a; }
+textarea { resize: vertical; min-height: 72px; }
+.field-note { font-size: 11px; color: #888; font-style: italic; line-height: 1.4; }
+.autoclose-note {
+  display: none; background: #fef9c3; border: 1px solid #fde68a;
+  border-radius: 2px; padding: 8px 12px; font-size: 12px; color: #713f12; margin-top: 4px;
+}
+.form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; padding-top: 16px; border-top: 1px solid #e8e8e8; }
+.empty-state { text-align: center; padding: 60px; color: #aaa; font-size: 13px; letter-spacing: 1px; }
+
+/* Confirm delete modal */
+#confirmModal .modal { max-width: 380px; text-align: center; }
+#confirmModal .modal p { font-size: 14px; color: #555; margin-bottom: 20px; }
+#confirmModal .form-actions { justify-content: center; border: none; padding: 0; margin: 0; }
+
+/* View modal */
+.view-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.view-field { display: flex; flex-direction: column; gap: 4px; }
+.view-field.full { grid-column: 1 / -1; }
+.view-label { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #888; }
+.view-value { font-size: 13px; color: #1a1a1a; padding: 8px 0; border-bottom: 1px solid #f0f0f0; min-height: 32px; line-height: 1.5; }
+.view-divider { grid-column: 1 / -1; border-top: 1px solid #e8e8e8; margin: 4px 0; }
+.photos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; margin-top: 8px; }
+.photo-thumb { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 2px; cursor: pointer; border: 1px solid #e8e8e8; transition: opacity 0.15s; }
+.photo-thumb:hover { opacity: 0.8; }
+
+/* Lightbox */
+.lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 2000; align-items: center; justify-content: center; }
+.lightbox.open { display: flex; }
+.lightbox img { max-width: 90vw; max-height: 90vh; object-fit: contain; border-radius: 2px; }
+.lightbox-close { position: absolute; top: 20px; right: 24px; color: #fff; font-size: 28px; cursor: pointer; background: none; border: none; line-height: 1; }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 24px; right: 24px; z-index: 3000;
+  background: #1a1a1a; color: #fff; padding: 12px 20px; border-radius: 4px;
+  font-size: 13px; letter-spacing: 0.5px; opacity: 0; transform: translateY(8px);
+  transition: opacity 0.25s, transform 0.25s; pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: #065f46; }
+.toast.error { background: #991b1b; }
+
+/* Conditional fields */
+.conditional-field { display: none; }
+.conditional-field.visible { display: flex; }
+
+/* Notify contacts checkboxes */
+.notify-contact-row {
+  display: flex; align-items: center; gap: 10px; padding: 6px 0;
+  border-bottom: 1px solid #f5f5f3;
+}
+.notify-contact-row:last-child { border-bottom: none; }
+.notify-contact-row input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; flex-shrink: 0; }
+.notify-contact-row-info { display: flex; flex-direction: column; }
+.notify-contact-row-name { font-size: 13px; font-weight: 600; }
+.notify-contact-row-role { font-size: 11px; color: #888; }
+
+/* Notification status in view modal */
+.notif-list { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.notif-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; border-radius: 4px; border: 1px solid #e8e8e8; background: #fff;
+  gap: 10px; flex-wrap: wrap;
+}
+.notif-item-info { display: flex; flex-direction: column; gap: 2px; }
+.notif-item-name { font-size: 13px; font-weight: 600; }
+.notif-item-role { font-size: 11px; color: #888; }
+.notif-item-status { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.notif-pending {
+  font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  background: #fff9e6; color: #92400e; border: 1px solid #f0d060;
+  border-radius: 20px; padding: 3px 10px;
+}
+.notif-confirmed {
+  font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  background: #d1fae5; color: #065f46; border-radius: 20px; padding: 3px 10px;
+}
+.btn-confirm-action {
+  font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  padding: 5px 14px; border-radius: 2px; cursor: pointer; border: 1.5px solid #1a1a1a;
+  background: #1a1a1a; color: #fff; transition: background 0.15s; font-family: Arial, sans-serif;
+}
+.btn-confirm-action:hover { background: #333; }
+
+/* ══════════════════════════════════════
+   PROCESS FLOWS PAGE
+══════════════════════════════════════ */
+.pf-brand-tabs {
+  background: #1a1a1a;
+  display: flex;
+  gap: 0;
+  padding: 0 24px;
+}
+.pf-brand-tab {
+  padding: 10px 22px; font-size: 13px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; cursor: pointer; color: rgba(255,255,255,0.5);
+  border-bottom: 3px solid transparent; transition: color 0.15s, border-color 0.15s;
+  background: none; border-top: none; border-left: none; border-right: none;
+}
+.pf-brand-tab:hover { color: rgba(255,255,255,0.85); }
+.pf-brand-tab.active-colette { color: #c07ac0; border-bottom-color: #7a3a7a; }
+.pf-brand-tab.active-tde { color: #7aabda; border-bottom-color: #1a4a7a; }
+
+.pf-flow-tabs-bar {
+  background: #fff; border-bottom: 1px solid #e8e8e8; padding: 0 24px;
+  display: flex; gap: 0; overflow-x: auto; scrollbar-width: none;
+}
+.pf-flow-tabs-bar::-webkit-scrollbar { display: none; }
+.pf-flow-tab {
+  padding: 11px 18px; font-size: 12px; font-weight: 600; letter-spacing: 0.8px;
+  text-transform: uppercase; cursor: pointer; color: #888; border-bottom: 3px solid transparent;
+  white-space: nowrap; background: none; border-top: none; border-left: none; border-right: none;
+  transition: color 0.15s, border-color 0.15s;
+}
+.pf-flow-tab:hover { color: #1a1a1a; }
+.pf-flow-tab.active-colette { color: #7a3a7a; border-bottom-color: #7a3a7a; }
+.pf-flow-tab.active-tde { color: #1a4a7a; border-bottom-color: #1a4a7a; }
+
+.pf-brand-panel { display: none; }
+.pf-brand-panel.active { display: block; }
+.pf-flow-panel { display: none; padding: 32px 24px 60px; }
+.pf-flow-panel.active { display: block; }
+.pf-flow { display: flex; flex-direction: column; align-items: center; gap: 0; max-width: 680px; margin: 0 auto; }
+
+.pf-connector {
+  width: 2px; height: 28px; background: #aaa; position: relative; flex-shrink: 0;
+}
+.pf-connector::after {
+  content: ''; position: absolute; bottom: -1px; left: 50%; transform: translateX(-50%);
+  border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid #aaa;
+}
+.pf-trigger-box {
+  background: #1a1a1a; color: #fff; border-radius: 4px; padding: 14px 20px;
+  width: 100%; max-width: 520px; text-align: center;
+}
+.pf-trigger-label { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; opacity: 0.6; margin-bottom: 4px; }
+.pf-trigger-text { font-size: 14px; font-weight: 700; }
+.pf-action-box {
+  background: #fff; border: 1px solid #e8e8e8; border-radius: 4px;
+  padding: 14px 18px; width: 100%; max-width: 520px;
+}
+.pf-action-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.pf-action-subtitle { font-size: 12px; color: #666; margin-bottom: 10px; }
+.pf-action-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+.pf-btn-template {
+  font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  padding: 5px 12px; border-radius: 2px; cursor: pointer;
+  background: #1a1a1a; color: #fff; border: 1.5px solid #1a1a1a; transition: opacity 0.15s;
+}
+.pf-btn-template:hover { opacity: 0.75; }
+.pf-btn-template.panel-open { background: #444; }
+.pf-btn-moreinfo {
+  font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  padding: 5px 12px; border-radius: 2px; cursor: pointer;
+  background: transparent; color: #1a1a1a; border: 1.5px solid #1a1a1a; transition: background 0.15s;
+}
+.pf-btn-moreinfo:hover { background: #f0f0f0; }
+.pf-btn-moreinfo.panel-open { background: #e8e8e8; }
+.pf-edit-panel { display: none; margin-top: 10px; border-top: 1px solid #e8e8e8; padding-top: 10px; }
+.pf-edit-panel.open { display: block; }
+.pf-edit-panel-label { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #888; margin-bottom: 6px; }
+.pf-edit-panel textarea {
+  width: 100%; min-height: 80px; padding: 8px 10px;
+  font-family: Arial, sans-serif; font-size: 12px;
+  border: 1px solid #e8e8e8; border-radius: 3px; resize: vertical;
+  color: #1a1a1a; background: #fafafa; outline: none; line-height: 1.5;
+}
+.pf-edit-panel textarea:focus { border-color: #aaa; background: #fff; }
+.pf-diamond-wrap { display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 520px; }
+.pf-diamond {
+  width: 130px; height: 130px; background: #fff; border: 2px solid #1a1a1a;
+  transform: rotate(45deg); display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin: 8px 0;
+}
+.pf-diamond-label { transform: rotate(-45deg); font-size: 12px; font-weight: 700; text-align: center; max-width: 100px; line-height: 1.3; }
+.pf-diamond.sm { width: 100px; height: 100px; }
+.pf-diamond.sm .pf-diamond-label { font-size: 10px; max-width: 78px; }
+.pf-branch-row { display: flex; gap: 16px; width: 100%; max-width: 680px; align-items: flex-start; }
+.pf-branch-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0; min-width: 0; }
+.pf-branch-label-pill {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase;
+  background: #e8e8e8; color: #444; border-radius: 20px; padding: 3px 10px;
+  margin-bottom: 8px; white-space: nowrap; text-align: center;
+}
+.pf-waiting-box {
+  background: #fff9e6; border: 1px solid #f0d060; border-radius: 4px;
+  padding: 12px 18px; width: 100%; max-width: 520px; text-align: center;
+}
+.pf-waiting-label { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: #b8860b; margin-bottom: 4px; font-weight: 700; }
+.pf-waiting-text { font-size: 13px; font-weight: 600; color: #7a6000; }
+.pf-closed-badge {
+  background: #e9ecef; color: #495057; border-radius: 20px;
+  padding: 6px 18px; font-size: 11px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase;
+}
+.pf-tflow-btn-colette {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #f0e6f0; border: 1.5px solid #7a3a7a; color: #7a3a7a;
+  border-radius: 20px; padding: 7px 18px; font-size: 11px; font-weight: 700;
+  letter-spacing: 0.8px; text-transform: uppercase; cursor: pointer; transition: background 0.15s;
+}
+.pf-tflow-btn-colette:hover { background: #e6d0e6; }
+.pf-tflow-btn-tde {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #e6eef5; border: 1.5px solid #1a4a7a; color: #1a4a7a;
+  border-radius: 20px; padding: 7px 18px; font-size: 11px; font-weight: 700;
+  letter-spacing: 0.8px; text-transform: uppercase; cursor: pointer; transition: background 0.15s;
+}
+.pf-tflow-btn-tde:hover { background: #d0e0f0; }
+.pf-resolution-buttons { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin: 8px 0; }
+.pf-res-btn {
+  font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  padding: 7px 16px; border-radius: 2px; cursor: pointer;
+  background: transparent; color: #1a1a1a; border: 1.5px solid #1a1a1a; transition: background 0.15s;
+}
+.pf-res-btn:hover { background: #f0f0f0; }
+.pf-res-btn.active { background: #1a1a1a; color: #fff; }
+.pf-res-subflow { display: none; width: 100%; }
+.pf-res-subflow.open { display: flex; flex-direction: column; align-items: center; gap: 0; }
+.pf-return-back-box-colette {
+  background: #f0e6f0; border: 1.5px solid #7a3a7a; border-left: 5px solid #7a3a7a;
+  border-radius: 4px; padding: 12px 18px; width: 100%; max-width: 520px;
+  text-align: center; font-size: 13px; font-weight: 700; color: #7a3a7a;
+}
+.pf-return-back-box-tde {
+  background: #e6eef5; border: 1.5px solid #1a4a7a; border-left: 5px solid #1a4a7a;
+  border-radius: 4px; padding: 12px 18px; width: 100%; max-width: 520px;
+  text-align: center; font-size: 13px; font-weight: 700; color: #1a4a7a;
+}
+.pf-tde-default-box {
+  background: #fff; border: 1px solid #e8e8e8; border-left: 5px solid #1a4a7a;
+  border-radius: 4px; padding: 14px 18px; width: 100%; max-width: 520px;
+}
+.pf-tde-default-label { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: #1a4a7a; font-weight: 700; margin-bottom: 4px; }
+.pf-merge-note { font-size: 11px; color: #888; font-style: italic; text-align: center; padding: 4px 0; }
+.pf-section-title {
+  font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  color: #888; text-align: center; margin: 8px 0 4px;
+}
+.pf-dual-entry { display: flex; gap: 16px; width: 100%; max-width: 680px; align-items: flex-start; }
+.pf-dual-entry-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0; min-width: 0; }
+.pf-entry-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  background: #1a1a1a; color: #fff; border-radius: 3px; padding: 3px 10px; margin-bottom: 8px;
+}
+
+@media (max-width: 640px) {
+  .tickets-container { padding: 20px; }
+  .form-grid, .view-grid { grid-template-columns: 1fr; }
+  .form-group.full, .view-field.full { grid-column: 1; }
+  .modal { padding: 20px; }
+  .pf-branch-row, .pf-dual-entry { flex-direction: column; align-items: center; }
+  .pf-branch-col, .pf-dual-entry-col { width: 100%; max-width: 520px; }
+  .pf-flow-panel { padding: 20px 12px 40px; }
+  .global-header h1 { font-size: 12px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     GLOBAL NAVBAR
+══════════════════════════════════════ -->
+<header class="global-header">
+  <div class="header-badge">Group 48</div>
+  <h1>CS Hub</h1>
+  <nav class="nav-btns">
+    <button class="nav-btn active-tickets" id="nav-tickets" onclick="switchPage('tickets')">Tickets</button>
+    <button class="nav-btn" id="nav-flows" onclick="switchPage('flows')">Process Flows</button>
+    <button class="nav-btn" id="nav-contacts" onclick="switchPage('contacts')">Contacts</button>
+  </nav>
+</header>
+
+
+<!-- ══════════════════════════════════════
+     PAGE: TICKETS
+══════════════════════════════════════ -->
+<div class="page-panel active" id="page-tickets">
+  <div class="tickets-container">
+
+    <!-- Summary Cards -->
+    <div class="summary">
+      <div class="card"><div class="card-label">Total Active</div><div class="card-value" style="color:#1a1a1a" id="cTotal">0</div></div>
+      <div class="card"><div class="card-label">Awaiting Photos</div><div class="card-value" style="color:#92400e" id="cAwaitingPhotos">0</div></div>
+      <div class="card"><div class="card-label">Waiting for Return</div><div class="card-value" style="color:#713f12" id="cWaitingReturn">0</div></div>
+      <div class="card"><div class="card-label">Under Review</div><div class="card-value" style="color:#1e40af" id="cUnderReview">0</div></div>
+      <div class="card"><div class="card-label">Refund Pending</div><div class="card-value" style="color:#c2410c" id="cRefundPending">0</div></div>
+      <div class="card"><div class="card-label">Contact Required</div><div class="card-value" style="color:#b91c1c" id="cContactRequired">0</div></div>
+      <div class="card"><div class="card-label">Waiting Customer Reply</div><div class="card-value" style="color:#7e22ce" id="cWaitingCustomer">0</div></div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <select id="filterBrand" onchange="render()">
+        <option value="">All Brands</option>
+        <option value="Colette">Colette</option>
+        <option value="TDE">TDE</option>
+      </select>
+      <select id="filterStatus" onchange="render()">
+        <option value="">All Statuses</option>
+        <option value="awaiting_photos">Awaiting Fault Photos</option>
+        <option value="waiting_return">Waiting for Return</option>
+        <option value="under_review">Under Review</option>
+        <option value="refund_pending">Refund Pending</option>
+        <option value="replacement_in_progress">Replacement in Progress</option>
+        <option value="contact_required">Contact Required</option>
+        <option value="waiting_customer_reply">Waiting for Customer Reply</option>
+        <option value="closed">Closed</option>
+      </select>
+      <select id="filterType" onchange="render()">
+        <option value="">All Types</option>
+        <option value="Faulty Product">Faulty Product</option>
+        <option value="Change of Mind">Change of Mind</option>
+        <option value="Unclaimed / Returned to Sender">Unclaimed / RTS</option>
+        <option value="Wrong Product">Wrong Product</option>
+        <option value="Other">Other</option>
+      </select>
+      <select id="filterResolution" onchange="render()">
+        <option value="">All Resolutions</option>
+        <option value="Pending Decision">Pending Decision</option>
+        <option value="Replacement">Replacement</option>
+        <option value="Exchange">Exchange</option>
+        <option value="Store Credit">Store Credit</option>
+        <option value="Refund">Refund</option>
+      </select>
+      <input type="text" id="filterSearch" placeholder="Search order, customer, email…" oninput="render()" style="min-width:200px;">
+      <button class="btn btn-toggle" id="btnShowClosed" onclick="toggleShowClosed()">Show Closed</button>
+      <button class="btn btn-outline" onclick="clearFilters()">Clear</button>
+      <button class="btn btn-primary ml-auto" onclick="openModal()">+ Add Ticket</button>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Brand</th>
+            <th>Order #</th>
+            <th>Customer</th>
+            <th>Email</th>
+            <th>Amount</th>
+            <th>SKU</th>
+            <th>Type</th>
+            <th>Resolution</th>
+            <th>Status</th>
+            <th>Internal Notes</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="ticketsBody"></tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     ADD / EDIT MODAL
+══════════════════════════════════════ -->
+<div class="modal-overlay" id="formModal">
+  <div class="modal">
+    <h2 id="modalTitle">Add Ticket</h2>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Brand *</label>
+        <select id="fBrand">
+          <option value="">Select…</option>
+          <option value="Colette">Colette</option>
+          <option value="TDE">TDE</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Order # *</label>
+        <input type="text" id="fOrder" placeholder="e.g. #12345">
+      </div>
+      <div class="form-group">
+        <label>Customer Name *</label>
+        <input type="text" id="fCustomer">
+      </div>
+      <div class="form-group">
+        <label>Customer Email *</label>
+        <input type="email" id="fEmail">
+      </div>
+      <div class="form-group">
+        <label>Amount</label>
+        <input type="text" id="fAmount" placeholder="e.g. $89.00">
+      </div>
+      <div class="form-group">
+        <label>SKU</label>
+        <input type="text" id="fSku">
+      </div>
+
+      <div class="form-divider"></div>
+
+      <div class="form-group full">
+        <label>Return Type *</label>
+        <select id="fReturnType" onchange="onReturnTypeChange()">
+          <option value="">Select…</option>
+          <option value="Faulty Product">Faulty Product</option>
+          <option value="Change of Mind">Change of Mind</option>
+          <option value="Unclaimed / Returned to Sender">Unclaimed / Returned to Sender</option>
+          <option value="Wrong Product">Wrong Product</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+
+      <!-- Conditional: Faulty → Fault Description -->
+      <div class="form-group conditional-field" id="faultDescGroup">
+        <label>Fault Description</label>
+        <select id="fFaultDesc">
+          <option value="">Select…</option>
+          <option value="Zipper issues">Zipper issues</option>
+          <option value="Peeling material">Peeling material</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+
+      <!-- Conditional: Faulty → Return Required? -->
+      <div class="form-group conditional-field" id="returnRequiredGroup">
+        <label>Is Return Required?</label>
+        <select id="fReturnRequired">
+          <option value="">Select…</option>
+          <option value="Yes">Yes</option>
+          <option value="No">No</option>
+        </select>
+      </div>
+
+      <!-- Conditional: Change of Mind → Reason -->
+      <div class="form-group full conditional-field" id="reasonGroup">
+        <label>Reason to Return</label>
+        <select id="fReason">
+          <option value="">Select…</option>
+          <option value="Size not as expected">Size not as expected</option>
+          <option value="Arrived too late">Arrived too late</option>
+          <option value="Colour not as expected">Colour not as expected</option>
+          <option value="Not what I was looking for">Not what I was looking for</option>
+          <option value="Not as described">Not as described</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+
+      <div class="form-divider"></div>
+
+      <div class="form-group">
+        <label>Resolution</label>
+        <select id="fResolution" onchange="onResolutionChange()">
+          <option value="Pending Decision">Pending Decision</option>
+          <option value="Replacement">Replacement</option>
+          <option value="Exchange">Exchange</option>
+          <option value="Store Credit">Store Credit</option>
+          <option value="Refund">Refund</option>
+        </select>
+      </div>
+
+      <!-- Replacement SKU -->
+      <div class="form-group conditional-field" id="replacementSkuGroup">
+        <label>Replacement SKU</label>
+        <input type="text" id="fReplacementSku" placeholder="SKU of replacement item">
+      </div>
+
+      <div class="form-group full">
+        <label>Status</label>
+        <select id="fStatus">
+          <option value="awaiting_photos">Awaiting Fault Photos</option>
+          <option value="waiting_return">Waiting for Return</option>
+          <option value="under_review">Under Review</option>
+          <option value="refund_pending">Refund Pending</option>
+          <option value="replacement_in_progress">Replacement in Progress</option>
+          <option value="contact_required">Contact Required</option>
+          <option value="waiting_customer_reply">Waiting for Customer Reply</option>
+          <option value="closed">Closed</option>
+        </select>
+      </div>
+
+      <div class="form-divider"></div>
+
+      <div class="form-group full">
+        <label>Notify Contacts</label>
+        <div id="fNotifyContactsList" style="display:flex;flex-direction:column;gap:8px;padding:10px 12px;border:1px solid #ddd;border-radius:2px;background:#fff;min-height:44px;">
+          <span style="font-size:12px;color:#aaa;" id="fNotifyEmpty">No contacts added yet. Add contacts in the Contacts tab.</span>
+        </div>
+        <span class="field-note" style="margin-top:4px;">Selected contacts will receive an email notification when this ticket is saved.</span>
+      </div>
+
+      <div class="form-divider"></div>
+
+      <div class="form-group full">
+        <label>Internal Comments</label>
+        <textarea id="fComments" placeholder="Internal notes…"></textarea>
+      </div>
+      <div class="form-group full">
+        <label>Customer Feedback</label>
+        <textarea id="fCustomerFeedback" placeholder="Customer's feedback or remarks…"></textarea>
+      </div>
+
+      <div class="form-group full" id="photoUploadGroup">
+        <label>Photos (optional)</label>
+        <input type="file" id="fPhotos" multiple accept="image/*">
+        <span class="field-note" id="photosNote"></span>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEntry()">Save Ticket</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     VIEW MODAL
+══════════════════════════════════════ -->
+<div class="modal-overlay" id="viewModal">
+  <div class="modal">
+    <h2>Ticket Details</h2>
+    <div class="view-grid" id="viewContent"></div>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeViewModal()">Close</button>
+      <button class="btn btn-primary" id="viewEditBtn" onclick="">Edit</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     CONFIRM DELETE MODAL
+══════════════════════════════════════ -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal">
+    <h2>Delete Ticket</h2>
+    <p>Are you sure? This action cannot be undone.</p>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeConfirm()">Cancel</button>
+      <button class="btn btn-primary" style="background:#991b1b;" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightboxImg" src="" alt="">
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+
+<!-- ══════════════════════════════════════
+     PAGE: PROCESS FLOWS
+══════════════════════════════════════ -->
+<div class="page-panel" id="page-flows">
+
+  <div class="pf-brand-tabs">
+    <button class="pf-brand-tab" id="pf-brand-btn-colette" onclick="pfSwitchBrand('colette')">Colette</button>
+    <button class="pf-brand-tab" id="pf-brand-btn-tde" onclick="pfSwitchBrand('tde')">TDE</button>
+  </div>
+
+  <!-- ═══ COLETTE ═══ -->
+  <div class="pf-brand-panel" id="pf-brand-colette">
+    <div class="pf-flow-tabs-bar" id="pf-flowtabs-colette">
+      <button class="pf-flow-tab" data-flow="faulty" onclick="pfSwitchFlow('colette','faulty')">Faulty Item</button>
+      <button class="pf-flow-tab" data-flow="returns" onclick="pfSwitchFlow('colette','returns')">Returns</button>
+      <button class="pf-flow-tab" data-flow="com" onclick="pfSwitchFlow('colette','com')">Change of Mind</button>
+      <button class="pf-flow-tab" data-flow="wrong" onclick="pfSwitchFlow('colette','wrong')">Wrong Item</button>
+      <button class="pf-flow-tab" data-flow="rts" onclick="pfSwitchFlow('colette','rts')">Return to Sender</button>
+      <button class="pf-flow-tab" data-flow="mystery" onclick="pfSwitchFlow('colette','mystery')">Mystery Colette</button>
+      <button class="pf-flow-tab" data-flow="resolution" onclick="pfSwitchFlow('colette','resolution')">Resolution</button>
+    </div>
+
+    <!-- COLETTE: FAULTY ITEM -->
+    <div class="pf-flow-panel" id="pf-flow-colette-faulty">
+      <div class="pf-flow">
+        <div class="pf-trigger-box"><div class="pf-trigger-label">Trigger</div><div class="pf-trigger-text">Customer contacts — reports a faulty item</div></div>
+        <div class="pf-connector"></div>
+        <div class="pf-action-box">
+          <div class="pf-action-title">Request photos of all items received</div>
+          <div class="pf-action-subtitle">Customer Service Team</div>
+          <div class="pf-action-buttons">
+            <button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button>
+            <button class="pf-btn-moreinfo" onclick="pfTogglePanel(this,'info')">More Info</button>
+          </div>
+          <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="col_faulty_s1_template" placeholder="Enter email template here..."></textarea></div>
+          <div class="pf-edit-panel" data-type="info"><div class="pf-edit-panel-label">More Info</div><textarea data-key="col_faulty_s1_info" placeholder="Add notes here..."></textarea></div>
+        </div>
+        <div class="pf-connector"></div>
+        <div class="pf-diamond-wrap"><div class="pf-diamond"><span class="pf-diamond-label">Return needed?</span></div></div>
+        <div class="pf-branch-row">
+          <div class="pf-branch-col">
+            <div class="pf-branch-label-pill">Yes — Return Needed</div>
+            <button class="pf-tflow-btn-colette" onclick="pfSwitchFlow('colette','returns')">→ Returns Flow</button>
+            <div class="pf-connector"></div>
+            <div class="pf-action-box">
+              <div class="pf-action-title">Deliver product to Colette Manager</div>
+              <div class="pf-action-subtitle">After return received · Manager assesses: stock / donate / discard</div>
+            </div>
+            <div class="pf-connector"></div>
+            <div class="pf-merge-note">↓ Continue to resolution</div>
+          </div>
+          <div class="pf-branch-col">
+            <div class="pf-branch-label-pill">No — No Return Needed</div>
+            <div class="pf-action-box">
+              <div class="pf-action-title">Add faulty item to system</div>
+              <div class="pf-action-subtitle">Customer Service Team</div>
+              <div class="pf-action-buttons"><button class="pf-btn-moreinfo" onclick="pfTogglePanel(this,'info')">More Info</button></div>
+              <div class="pf-edit-panel" data-type="info"><div class="pf-edit-panel-label">More Info</div><textarea data-key="col_faulty_noreturn_info" placeholder="Add notes here..."></textarea></div>
+            </div>
+            <div class="pf-connector"></div>
+            <div class="pf-merge-note">↓ Continue to resolution</div>
+          </div>
+        </div>
+        <div class="pf-connector"></div>
+        <div class="pf-diamond-wrap"><div class="pf-diamond"><span class="pf-diamond-label">Customer wants replacement?</span></div></div>
+        <div class="pf-branch-row">
+          <div class="pf-branch-col">
+            <div class="pf-branch-label-pill">Yes</div>
+            <button class="pf-res-btn" onclick="pfSwitchFlow('colette','resolution'); setTimeout(()=>pfOpenResolution('colette','replacement'),200)">→ Replacement Flow</button>
+          </div>
+          <div class="pf-branch-col">
+            <div class="pf-branch-label-pill">No — Other Options</div>
+            <div class="pf-resolution-buttons">
+              <button class="pf-res-btn" onclick="pfSwitchFlow('colette','resolution'); setTimeout(()=>pfOpenResolution('colette','exchange'),200)">Exchange</button>
+              <button class="pf-res-btn" onclick="pfSwitchFlow('colette','resolution'); setTimeout(()=>pfOpenResolution('colette','storecredit'),200)">Store Credit</button>
+              <button class="pf-res-btn" onclick="pfSwitchFlow('colette','resolution'); setTimeout(()=>pfOpenResolution('colette','refund'),200)">Refund</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLETTE: RETURNS -->
+    <div class="pf-flow-panel" id="pf-flow-colette-returns">
+      <div class="pf-flow">
+        <div class="pf-trigger-box"><div class="pf-trigger-label">Trigger</div><div class="pf-trigger-text">Return needed — triggered from Faulty Item, Change of Mind or Wrong Item</div></div>
+        <div class="pf-connector"></div>
+        <div class="pf-action-box">
+          <div class="pf-action-title">Provide return label to customer</div>
+          <div class="pf-action-subtitle">Customer Service Team · Colette pays for return label</div>
+          <div class="pf-action-buttons">
+            <button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button>
+            <button class="pf-btn-moreinfo" onclick="pfTogglePanel(this,'info')">More Info</button>
+          </div>
+          <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="col_returns_label_template" placeholder="Enter email template here..."></textarea></div>
+          <div class="pf-edit-panel" data-type="info"><div class="pf-edit-panel-label">More Info</div><textarea data-key="col_returns_label_info" placeholder="Always instruct: include name + order number + email inside parcel."></textarea></div>
+        </div>
+        <div class="pf-connector"></div>
+        <div class="pf-action-box">
+          <div class="pf-action-title">Add return to CS Tickets</div>
+          <div class="pf-action-subtitle">Customer Service Team</div>
+          <div class="pf-action-buttons"><button class="pf-btn-moreinfo" onclick="pfTogglePanel(this,'info')">More Info</button></div>
+          <div class="pf-edit-panel" data-type="info"><div class="pf-edit-panel-label">More Info</div><textarea data-key="col_returns_tracker_info" placeholder="Add notes here..."></textarea></div>
+        </div>
+        <div class="pf-connector"></div>
+        <div class="pf-return-back-box-colette">Returns to triggering flow → continue to resolution</div>
+      </div>
+    </div>
+
+    <!-- COLETTE: CHANGE OF MIND -->
+    <div class="pf-flow-panel" id="pf-flow-colette-com">
+      <div class="pf-flow">
+        <div class="pf-trigger-box"><div class="pf-trigger-label">Trigger</div><div class="pf-trigger-text">Customer contacts — wants to return an item</div></div>
+        <div class="pf-connector"></div>
+        <div class="pf-action-box">
+          <div class="pf-action-title">Request feedback on reason for return</div>
+          <div class="pf-action-subtitle">Customer Service Team · Always send regardless of outcome</div>
+          <div class="pf-action-buttons">
+            <button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button>
+            <button class="pf-btn-moreinfo" onclick="pfTogglePanel(this,'info')">More Info</button>
+          </div>
+          <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="col_com_feedback_template" placeholder="Enter email template here..."></textarea></div>
+          <div class="pf-edit-panel" data-type="info"><div class="pf-edit-panel-label">More Info</div><textarea data-key="col_com_feedback_info" placeholder="Add notes here..."></textarea></div>
+        </div>
+        <div class="pf-connector"></div>
+        <div class="pf-diamond-wrap"><div class="pf-diamond"><span class="pf-diamond-label">Eligible for return?</span></div></div>
+        <div class="pf-branch-row">
+          <div class="pf-branch-col">
+            <div class="pf-branch-label-pill">Sale Item — NOT Eligible</div>
+            <div class="pf-action-box">
+              <div class="pf-action-title">Inform customer — return not accepted</div>
+              <div class="pf-action-subtitle">Customer Service Team</div>
+              <div class="pf-action-buttons">
+                <button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button>
+                <button class="pf-btn-moreinfo" onclick="pfTogglePanel(this,'info')">More Info</button>
+              </div>
+              <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="col_com_rejected_template" placeholder="Enter email template here..."></textarea></div>
+              <div class="pf-edit-panel" data-type="info"><div class="pf-edit-panel-label">More Info</div><textarea data-key="col_com_rejected_info" placeholder="Sale = reduced price (markdown or temp sale). Promos like 25% off second bag = NOT sale. Edge case: if returning full price bag, second bag reverts to full price — deduct difference."></textarea></div>
+            </div>
+            <div class="pf-connector"></div>
+            <div class="pf-closed-badge">Ticket Closed</div>
+          </div>
+          <div class="pf-branch-col">
+            <div class="pf-branch-label-pill">Eligible</div>
+            <button class="pf-tflow-btn-colette" onclick="pfSwitchFlow('colette','returns')">→ Returns Flow</button>
+            <div class="pf-connector"></div>
+            <div class="pf-action-box">
+              <div class="pf-action-title">Offer resolution options</div>
+              <div class="pf-action-subtitle">Customer Service Team · NO replacement for change of mind</div>
+              <div class="pf-action-buttons"><button class="pf-btn-moreinfo" onclick="pfTogglePanel(this,'info')">More Info</button></div>
+              <div class="pf-edit-panel" data-type="info"><div class="pf-edit-panel-label">More Info</div><textarea data-key="col_com_res_info" placeholder="Add notes here..."></textarea></div>
+            </div>
+            <div class="pf-connector"></div>
+            <div class="pf-resolution-buttons">
+              <button class="pf-res-btn" onclick="pfSwitchFlow('colette','resolution'); setTimeout(()=>pfOpenResolution('colette','exchange'),200)">Exchange</button>
+              <button class="pf-res-btn" onclick="pfSwitchFlow('colette','resolution'); setTimeout(()=>pfOpenResolution('colette','storecredit'),200)">Store Credit</button>
+              <button class="pf-res-btn" onclick="pfSwitchFlow('colette','resolution'); setTimeout(()=>pfOpenResolution('colette','refund'),200)">Refund</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLETTE: WRONG ITEM -->
+    <div class="pf-flow-panel" id="pf-flow-colette-wrong">
+      <div class="pf-flow">
+        <div class="pf-trigger-box"><div class="pf-trigger-label">Trigger</div><div class="pf-trigger-text">Customer contacts — received wrong item</div></div>
+        <div class="pf-connector"></div>
+        <div class="pf-action-box">
+          <div class="pf-action-title">Request photos of all items received</div>
+          <div class="pf-action-subtitle">Customer Service Team</div>
+          <div class="pf-action-buttons">
+            <button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button>
+            <button class="pf-btn-moreinfo" onclick="pfTogglePanel(this,'info')">More Info</button>
+          </div>
+          <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="col_wrong_photos_template" placeholder="Enter email template here..."></textarea></div>
+          <div class="pf-edit-panel" data-type="info"><div class="pf-edit-panel-label">More Info</div><textarea data-key="col_wrong_photos_info" placeholder="Add notes here..."></textarea></div>
+        </div>
+        <div class="pf-connector"></div>
+        <div class="pf-action-box">
+          <div class="pf-action-title">Confirm delivery address</div>
+          <div class="pf-action-subtitle">Customer Service Team</div>
+          <div class="pf-action-buttons"><button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button></div>
+          <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="col_wrong_address_template" placeholder="Enter email template here..."></textarea></div>
+        </div>
+        <div class="pf-connector"></div>
+        <button class="pf-tflow-btn-colette" onclick="pfSwitchFlow('colette','returns')">→ Returns Flow</button>
+        <div class="pf-connector"></div>
+        <div class="pf-diamond-wrap"><div class="pf-diamond"><span class="pf-diamond-label">Customer wants replacement?</span></div></div>
+        <div class="pf-branch-row">
+          <div class="pf-branch-col">
+            <div class="pf-branch-label-pill">Yes</div>
+            <button class="pf-res-btn" onclick="pfSwitchFlow('colette','resolution'); setTimeout(()=>pfOpenResolution('colette','replacement'),200)">→ Replacement Flow</button>
+          </div>
+          <div class="pf-branch-col">
+            <div class="pf-branch-label-pill">No</div>
+            <div class="pf-resolution-buttons">
+              <button class="pf-res-btn" onclick="pfSwitchFlow('colette','resolution'); setTimeout(()=>pfOpenResolution('colette','exchange'),200)">Exchange</button>
+              <button class="pf-res-btn" onclick="pfSwitchFlow('colette','resolution'); setTimeout(()=>pfOpenResolution('colette','storecredit'),200)">Store Credit</button>
+              <button class="pf-res-btn" onclick="pfSwitchFlow('colette','resolution'); setTimeout(()=>pfOpenResolution('colette','refund'),200)">Refund</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLETTE: RETURN TO SENDER -->
+    <div class="pf-flow-panel" id="pf-flow-colette-rts">
+      <div class="pf-flow">
+        <div class="pf-trigger-box"><div class="pf-trigger-label">Trigger</div><div class="pf-trigger-text">Package returned undelivered</div></div>
+        <div class="pf-connector"></div>
+        <div class="pf-action-box">
+          <div class="pf-action-title">Contact customer + log in CS Tickets</div>
+          <div class="pf-action-subtitle">Customer Service Team · Log as "Mystery Colette" if no ID in parcel</div>
+          <div class="pf-action-buttons">
+            <button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button>
+            <button class="pf-btn-moreinfo" onclick="pfTogglePanel(this,'info')">More Info</button>
+          </div>
+          <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="col_rts_contact_template" placeholder="Enter email template here..."></textarea></div>
+          <div class="pf-edit-panel" data-type="info"><div class="pf-edit-panel-label">More Info</div><textarea data-key="col_rts_contact_info" placeholder="Add notes here..."></textarea></div>
+        </div>
+        <div class="pf-connector"></div>
+        <div class="pf-diamond-wrap"><div class="pf-diamond"><span class="pf-diamond-label">Customer situation?</span></div></div>
+        <div class="pf-branch-row">
+          <div class="pf-branch-col">
+            <div class="pf-branch-label-pill">Australia — 1st Time</div>
+            <div class="pf-action-box">
+              <div class="pf-action-title">Re-ship free as goodwill</div>
+              <div class="pf-action-subtitle">eCommerce Team</div>
+              <div class="pf-action-buttons"><button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button></div>
+              <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="col_rts_au1_template" placeholder="Enter email template here..."></textarea></div>
+            </div>
+            <div class="pf-connector"></div><div class="pf-closed-badge">Ticket Closed</div>
+          </div>
+          <div class="pf-branch-col">
+            <div class="pf-branch-label-pill">International</div>
+            <div class="pf-action-box">
+              <div class="pf-action-title">Customer pays re-shipping cost</div>
+              <div class="pf-action-subtitle">Customer Service Team</div>
+              <div class="pf-action-buttons"><button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button></div>
+              <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="col_rts_intl_template" placeholder="Enter email template here..."></textarea></div>
+            </div>
+            <div class="pf-connector"></div><div class="pf-closed-badge">Ticket Closed</div>
+          </div>
+          <div class="pf-branch-col">
+            <div class="pf-branch-label-pill">2nd Time — Any Location</div>
+            <div class="pf-action-box">
+              <div class="pf-action-title">Customer pays all re-shipping costs</div>
+              <div class="pf-action-subtitle">Customer Service Team</div>
+              <div class="pf-action-buttons"><button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button></div>
+              <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="col_rts_2nd_template" placeholder="Enter email template here..."></textarea></div>
+            </div>
+            <div class="pf-connector"></div><div class="pf-closed-badge">Ticket Closed</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLETTE: MYSTERY COLETTE -->
+    <div class="pf-flow-panel" id="pf-flow-colette-mystery">
+      <div class="pf-flow">
+        <div class="pf-trigger-box"><div class="pf-trigger-label">Trigger</div><div class="pf-trigger-text">Package arrives with no customer identification</div></div>
+        <div class="pf-connector"></div>
+        <div class="pf-action-box">
+          <div class="pf-action-title">Log as "Mystery Colette" in CS Tickets</div>
+          <div class="pf-action-subtitle">Customer Service Team</div>
+          <div class="pf-action-buttons"><button class="pf-btn-moreinfo" onclick="pfTogglePanel(this,'info')">More Info</button></div>
+          <div class="pf-edit-panel" data-type="info"><div class="pf-edit-panel-label">More Info</div><textarea data-key="col_mystery_log_info" placeholder="Include SKU + check origin with Aus Post. Status: Pending identification."></textarea></div>
+        </div>
+        <div class="pf-connector"></div>
+        <div class="pf-waiting-box"><div class="pf-waiting-label">Waiting</div><div class="pf-waiting-text">Wait for customer to contact</div></div>
+        <div class="pf-connector"></div>
+        <div class="pf-action-box">
+          <div class="pf-action-title">Identify return via log + confirm details</div>
+          <div class="pf-action-subtitle">Customer Service Team</div>
+          <div class="pf-action-buttons">
+            <button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button>
+            <button class="pf-btn-moreinfo" onclick="pfTogglePanel(this,'info')">More Info</button>
+          </div>
+          <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="col_mystery_identify_template" placeholder="Enter email template here..."></textarea></div>
+          <div class="pf-edit-panel" data-type="info"><div class="pf-edit-panel-label">More Info</div><textarea data-key="col_mystery_identify_info" placeholder="Add notes here..."></textarea></div>
+        </div>
+        <div class="pf-connector"></div>
+        <div class="pf-action-box">
+          <div class="pf-action-title">Update CS Tickets with customer details</div>
+          <div class="pf-action-subtitle">Customer Service Team</div>
+        </div>
+        <div class="pf-connector"></div>
+        <button class="pf-tflow-btn-colette" onclick="pfSwitchFlow('colette','resolution')">→ Resolution Flow</button>
+      </div>
+    </div>
+
+    <!-- COLETTE: RESOLUTION -->
+    <div class="pf-flow-panel" id="pf-flow-colette-resolution">
+      <div class="pf-flow">
+        <div class="pf-trigger-box"><div class="pf-trigger-label">Resolution Hub</div><div class="pf-trigger-text">Select a resolution type to view its flow</div></div>
+        <div class="pf-connector"></div>
+        <div class="pf-resolution-buttons">
+          <button class="pf-res-btn" id="pf-res-btn-colette-replacement" onclick="pfOpenResolution('colette','replacement')">Replacement</button>
+          <button class="pf-res-btn" id="pf-res-btn-colette-exchange" onclick="pfOpenResolution('colette','exchange')">Exchange</button>
+          <button class="pf-res-btn" id="pf-res-btn-colette-storecredit" onclick="pfOpenResolution('colette','storecredit')">Store Credit</button>
+          <button class="pf-res-btn" id="pf-res-btn-colette-refund" onclick="pfOpenResolution('colette','refund')">Refund</button>
+        </div>
+        <div class="pf-res-subflow" id="pf-res-colette-replacement">
+          <div class="pf-connector"></div><div class="pf-section-title">Replacement Flow</div><div class="pf-connector"></div>
+          <div class="pf-diamond-wrap"><div class="pf-diamond"><span class="pf-diamond-label">Same item or different?</span></div></div>
+          <div class="pf-branch-row">
+            <div class="pf-branch-col">
+              <div class="pf-branch-label-pill">Same Item</div>
+              <div class="pf-action-box">
+                <div class="pf-action-title">Confirm delivery address</div><div class="pf-action-subtitle">Customer Service Team</div>
+                <div class="pf-action-buttons"><button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button></div>
+                <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="col_rep_same_addr_template" placeholder="Enter email template here..."></textarea></div>
+              </div>
+              <div class="pf-connector"></div>
+              <div class="pf-action-box">
+                <div class="pf-action-title">Arrange dispatch</div><div class="pf-action-subtitle">eCommerce Team</div>
+                <div class="pf-action-buttons"><button class="pf-btn-moreinfo" onclick="pfTogglePanel(this,'info')">More Info</button></div>
+                <div class="pf-edit-panel" data-type="info"><div class="pf-edit-panel-label">More Info</div><textarea data-key="col_rep_same_dispatch_info" placeholder="Add notes here..."></textarea></div>
+              </div>
+              <div class="pf-connector"></div><div class="pf-merge-note">↓ Merge below</div>
+            </div>
+            <div class="pf-branch-col">
+              <div class="pf-branch-label-pill">Different Item</div>
+              <div class="pf-action-box"><div class="pf-action-title">Check price difference</div><div class="pf-action-subtitle">CS / eCommerce Team</div></div>
+              <div class="pf-connector"></div>
+              <div class="pf-action-box">
+                <div class="pf-action-title">Send invoice if price difference exists</div><div class="pf-action-subtitle">eCommerce Team</div>
+                <div class="pf-action-buttons"><button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button></div>
+                <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="col_rep_diff_invoice_template" placeholder="Enter email template here..."></textarea></div>
+              </div>
+              <div class="pf-connector"></div>
+              <div class="pf-action-box"><div class="pf-action-title">Wait for payment confirmation</div><div class="pf-action-subtitle">eCommerce Team confirms</div></div>
+              <div class="pf-connector"></div>
+              <div class="pf-action-box"><div class="pf-action-title">Arrange dispatch</div><div class="pf-action-subtitle">eCommerce Team</div></div>
+              <div class="pf-connector"></div><div class="pf-merge-note">↓ Merge below</div>
+            </div>
+          </div>
+          <div class="pf-connector"></div>
+          <div class="pf-action-box"><div class="pf-action-title">Customer receives order confirmation + tracking</div><div class="pf-action-subtitle">Automated / eCommerce Team</div></div>
+          <div class="pf-connector"></div><div class="pf-closed-badge">Ticket Closed</div>
+        </div>
+        <div class="pf-res-subflow" id="pf-res-colette-exchange">
+          <div class="pf-connector"></div><div class="pf-section-title">Exchange Flow</div><div class="pf-connector"></div>
+          <div class="pf-action-box">
+            <div class="pf-action-title">Confirm delivery address + item requested</div><div class="pf-action-subtitle">Customer Service Team</div>
+            <div class="pf-action-buttons"><button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button></div>
+            <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="col_exch_addr_template" placeholder="Enter email template here..."></textarea></div>
+          </div>
+          <div class="pf-connector"></div>
+          <div class="pf-action-box"><div class="pf-action-title">Arrange dispatch of new item</div><div class="pf-action-subtitle">eCommerce Team</div></div>
+          <div class="pf-connector"></div>
+          <div class="pf-action-box"><div class="pf-action-title">Customer receives order confirmation + tracking</div><div class="pf-action-subtitle">Automated / eCommerce Team</div></div>
+          <div class="pf-connector"></div><div class="pf-closed-badge">Ticket Closed</div>
+        </div>
+        <div class="pf-res-subflow" id="pf-res-colette-storecredit">
+          <div class="pf-connector"></div><div class="pf-section-title">Store Credit Flow</div><div class="pf-connector"></div>
+          <div class="pf-action-box">
+            <div class="pf-action-title">Request store credit from eCommerce Team</div><div class="pf-action-subtitle">Customer Service Team → eCommerce Team</div>
+            <div class="pf-action-buttons"><button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button></div>
+            <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="col_sc_request_template" placeholder="Enter email template here..."></textarea></div>
+          </div>
+          <div class="pf-connector"></div>
+          <div class="pf-action-box"><div class="pf-action-title">eCommerce Team creates credit code + sends to CS</div><div class="pf-action-subtitle">eCommerce Team</div></div>
+          <div class="pf-connector"></div>
+          <div class="pf-action-box">
+            <div class="pf-action-title">Send credit code to customer</div><div class="pf-action-subtitle">Customer Service Team</div>
+            <div class="pf-action-buttons"><button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button></div>
+            <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="col_sc_send_template" placeholder="Enter email template here..."></textarea></div>
+          </div>
+          <div class="pf-connector"></div><div class="pf-closed-badge">Ticket Closed</div>
+        </div>
+        <div class="pf-res-subflow" id="pf-res-colette-refund">
+          <div class="pf-connector"></div><div class="pf-section-title">Refund Flow</div><div class="pf-connector"></div>
+          <div class="pf-action-box">
+            <div class="pf-action-title">Notify Marc + Finance Team</div><div class="pf-action-subtitle">Customer Service Team</div>
+            <div class="pf-action-buttons"><button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button></div>
+            <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="col_ref_notify_template" placeholder="Enter email template here..."></textarea></div>
+          </div>
+          <div class="pf-connector"></div>
+          <div class="pf-action-box"><div class="pf-action-title">Marc processes refund in Shopify</div><div class="pf-action-subtitle">Marc (CEO) · Colette</div></div>
+          <div class="pf-connector"></div>
+          <div class="pf-action-box"><div class="pf-action-title">Finance Team processes in NetSuite</div><div class="pf-action-subtitle">Finance Team</div></div>
+          <div class="pf-connector"></div>
+          <div class="pf-action-box">
+            <div class="pf-action-title">Send refund confirmation to customer</div><div class="pf-action-subtitle">Customer Service Team · 2–3 business days</div>
+            <div class="pf-action-buttons"><button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button></div>
+            <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="col_ref_confirm_template" placeholder="Enter email template here..."></textarea></div>
+          </div>
+          <div class="pf-connector"></div><div class="pf-closed-badge">Ticket Closed</div>
+        </div>
+      </div>
+    </div>
+  </div><!-- end pf-brand-colette -->
+
+  <!-- ═══ TDE ═══ -->
+  <div class="pf-brand-panel" id="pf-brand-tde">
+    <div class="pf-flow-tabs-bar" id="pf-flowtabs-tde">
+      <button class="pf-flow-tab" data-flow="faulty" onclick="pfSwitchFlow('tde','faulty')">Faulty Item</button>
+      <button class="pf-flow-tab" data-flow="returns" onclick="pfSwitchFlow('tde','returns')">Returns</button>
+      <button class="pf-flow-tab" data-flow="com" onclick="pfSwitchFlow('tde','com')">Change of Mind</button>
+      <button class="pf-flow-tab" data-flow="wrong" onclick="pfSwitchFlow('tde','wrong')">Wrong Item</button>
+      <button class="pf-flow-tab" data-flow="missing-mono" onclick="pfSwitchFlow('tde','missing-mono')">Missing Monogram</button>
+      <button class="pf-flow-tab" data-flow="rts" onclick="pfSwitchFlow('tde','rts')">Return to Sender</button>
+      <button class="pf-flow-tab" data-flow="daily-unknown" onclick="pfSwitchFlow('tde','daily-unknown')">Daily Unknown</button>
+      <button class="pf-flow-tab" data-flow="resolution" onclick="pfSwitchFlow('tde','resolution')">Resolution</button>
+    </div>
+
+    <!-- TDE: FAULTY ITEM -->
+    <div class="pf-flow-panel" id="pf-flow-tde-faulty">
+      <div class="pf-flow">
+        <div class="pf-trigger-box"><div class="pf-trigger-label">Trigger</div><div class="pf-trigger-text">Customer contacts — reports a faulty item</div></div>
+        <div class="pf-connector"></div>
+        <div class="pf-action-box">
+          <div class="pf-action-title">Request photos of all items received</div><div class="pf-action-subtitle">Customer Service Team</div>
+          <div class="pf-action-buttons">
+            <button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button>
+            <button class="pf-btn-moreinfo" onclick="pfTogglePanel(this,'info')">More Info</button>
+          </div>
+          <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="tde_faulty_s1_template" placeholder="Enter email template here..."></textarea></div>
+          <div class="pf-edit-panel" data-type="info"><div class="pf-edit-panel-label">More Info</div><textarea data-key="tde_faulty_s1_info" placeholder="Add notes here..."></textarea></div>
+        </div>
+        <div class="pf-connector"></div>
+        <div class="pf-diamond-wrap"><div class="pf-diamond"><span class="pf-diamond-label">Return needed?</span></div></div>
+        <div class="pf-branch-row">
+          <div class="pf-branch-col">
+            <div class="pf-branch-label-pill">Yes — Return Needed</div>
+            <button class="pf-tflow-btn-tde" onclick="pfSwitchFlow('tde','returns')">→ Returns Flow</button>
+            <div class="pf-connector"></div>
+            <div class="pf-action-box">
+              <div class="pf-action-title">Deliver product to TDE Manager</div>
+              <div class="pf-action-subtitle">After return received · Manager assesses: stock / donate / discard</div>
+            </div>
+            <div class="pf-connector"></div><div class="pf-merge-note">↓ Continue to resolution</div>
+          </div>
+          <div class="pf-branch-col">
+            <div class="pf-branch-label-pill">No — No Return Needed</div>
+            <div class="pf-action-box">
+              <div class="pf-action-title">Add faulty item to system</div><div class="pf-action-subtitle">Customer Service Team</div>
+              <div class="pf-action-buttons"><button class="pf-btn-moreinfo" onclick="pfTogglePanel(this,'info')">More Info</button></div>
+              <div class="pf-edit-panel" data-type="info"><div class="pf-edit-panel-label">More Info</div><textarea data-key="tde_faulty_noreturn_info" placeholder="Add notes here..."></textarea></div>
+            </div>
+            <div class="pf-connector"></div><div class="pf-merge-note">↓ Continue to resolution</div>
+          </div>
+        </div>
+        <div class="pf-connector"></div>
+        <div class="pf-tde-default-box">
+          <div class="pf-tde-default-label">TDE Default — Offer First</div>
+          <div class="pf-action-title" style="font-size:13px;">Offer replacement to customer</div>
+          <div class="pf-action-buttons" style="margin-top:8px;">
+            <button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button>
+            <button class="pf-btn-moreinfo" onclick="pfTogglePanel(this,'info')">More Info</button>
+          </div>
+          <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="tde_faulty_offer_template" placeholder="Enter email template here..."></textarea></div>
+          <div class="pf-edit-panel" data-type="info"><div class="pf-edit-panel-label">More Info</div><textarea data-key="tde_faulty_offer_info" placeholder="TDE default policy: always offer replacement first before other options."></textarea></div>
+        </div>
+        <div class="pf-connector"></div>
+        <div class="pf-diamond-wrap"><div class="pf-diamond"><span class="pf-diamond-label">Customer accepts replacement?</span></div></div>
+        <div class="pf-branch-row">
+          <div class="pf-branch-col">
+            <div class="pf-branch-label-pill">Yes</div>
+            <button class="pf-res-btn" onclick="pfSwitchFlow('tde','resolution'); setTimeout(()=>pfOpenResolution('tde','replacement'),200)">→ Replacement Flow</button>
+          </div>
+          <div class="pf-branch-col">
+            <div class="pf-branch-label-pill">No — Other Options</div>
+            <div class="pf-resolution-buttons">
+              <button class="pf-res-btn" onclick="pfSwitchFlow('tde','resolution'); setTimeout(()=>pfOpenResolution('tde','exchange'),200)">Exchange</button>
+              <button class="pf-res-btn" onclick="pfSwitchFlow('tde','resolution'); setTimeout(()=>pfOpenResolution('tde','storecredit'),200)">Store Credit</button>
+              <button class="pf-res-btn" onclick="pfSwitchFlow('tde','resolution'); setTimeout(()=>pfOpenResolution('tde','refund'),200)">Refund</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TDE: RETURNS -->
+    <div class="pf-flow-panel" id="pf-flow-tde-returns">
+      <div class="pf-flow">
+        <div class="pf-trigger-box"><div class="pf-trigger-label">Trigger</div><div class="pf-trigger-text">Return needed — triggered from Faulty Item or Wrong Item</div></div>
+        <div class="pf-connector"></div>
+        <div class="pf-action-box">
+          <div class="pf-action-title">Provide return label to customer</div><div class="pf-action-subtitle">Customer Service Team · TDE pays for faulty returns only</div>
+          <div class="pf-action-buttons">
+            <button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button>
+            <button class="pf-btn-moreinfo" onclick="pfTogglePanel(this,'info')">More Info</button>
+          </div>
+          <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="tde_returns_label_template" placeholder="Enter email template here..."></textarea></div>
+          <div class="pf-edit-panel" data-type="info"><div class="pf-edit-panel-label">More Info</div><textarea data-key="tde_returns_label_info" placeholder="Change of mind returns are NOT triggered here — customer pays and sends back independently."></textarea></div>
+        </div>
+        <div class="pf-connector"></div>
+        <div class="pf-action-box">
+          <div class="pf-action-title">Add return to CS Tickets</div><div class="pf-action-subtitle">Customer Service Team</div>
+          <div class="pf-action-buttons"><button class="pf-btn-moreinfo" onclick="pfTogglePanel(this,'info')">More Info</button></div>
+          <div class="pf-edit-panel" data-type="info"><div class="pf-edit-panel-label">More Info</div><textarea data-key="tde_returns_tracker_info" placeholder="Add notes here..."></textarea></div>
+        </div>
+        <div class="pf-connector"></div>
+        <div class="pf-return-back-box-tde">Returns to triggering flow → continue to resolution</div>
+      </div>
+    </div>
+
+    <!-- TDE: CHANGE OF MIND -->
+    <div class="pf-flow-panel" id="pf-flow-tde-com">
+      <div class="pf-flow">
+        <div class="pf-trigger-box"><div class="pf-trigger-label">Trigger</div><div class="pf-trigger-text">Customer contacts — wants to return an item</div></div>
+        <div class="pf-connector"></div>
+        <div class="pf-action-box">
+          <div class="pf-action-title">Request feedback on reason for return</div><div class="pf-action-subtitle">Customer Service Team · Always send regardless of outcome</div>
+          <div class="pf-action-buttons">
+            <button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button>
+            <button class="pf-btn-moreinfo" onclick="pfTogglePanel(this,'info')">More Info</button>
+          </div>
+          <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="tde_com_feedback_template" placeholder="Enter email template here..."></textarea></div>
+          <div class="pf-edit-panel" data-type="info"><div class="pf-edit-panel-label">More Info</div><textarea data-key="tde_com_feedback_info" placeholder="Add notes here..."></textarea></div>
+        </div>
+        <div class="pf-connector"></div>
+        <div class="pf-diamond-wrap"><div class="pf-diamond"><span class="pf-diamond-label">Is the item monogrammed?</span></div></div>
+        <div class="pf-branch-row">
+          <div class="pf-branch-col">
+            <div class="pf-branch-label-pill">Monogrammed — NOT Eligible</div>
+            <div class="pf-action-box">
+              <div class="pf-action-title">Inform customer — return not accepted</div><div class="pf-action-subtitle">Customer Service Team · Offer 10% goodwill discount</div>
+              <div class="pf-action-buttons">
+                <button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button>
+                <button class="pf-btn-moreinfo" onclick="pfTogglePanel(this,'info')">More Info</button>
+              </div>
+              <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="tde_com_rejected_template" placeholder="Enter email template here..."></textarea></div>
+              <div class="pf-edit-panel" data-type="info"><div class="pf-edit-panel-label">More Info</div><textarea data-key="tde_com_rejected_info" placeholder="Offer 10% goodwill discount for monogrammed items..."></textarea></div>
+            </div>
+            <div class="pf-connector"></div><div class="pf-closed-badge">Ticket Closed</div>
+          </div>
+          <div class="pf-branch-col">
+            <div class="pf-branch-label-pill">Not Monogrammed — Eligible</div>
+            <div class="pf-action-box">
+              <div class="pf-action-title">Send return address + add to CS Tickets</div><div class="pf-action-subtitle">Customer Service Team · Customer pays return shipping</div>
+              <div class="pf-action-buttons">
+                <button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button>
+                <button class="pf-btn-moreinfo" onclick="pfTogglePanel(this,'info')">More Info</button>
+              </div>
+              <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="tde_com_sendaddr_template" placeholder="Enter email template here..."></textarea></div>
+              <div class="pf-edit-panel" data-type="info"><div class="pf-edit-panel-label">More Info</div><textarea data-key="tde_com_sendaddr_info" placeholder="No Returns Flow trigger — customer sends independently."></textarea></div>
+            </div>
+            <div class="pf-connector"></div>
+            <div class="pf-waiting-box"><div class="pf-waiting-label">Waiting</div><div class="pf-waiting-text">Wait for return to arrive</div></div>
+            <div class="pf-connector"></div>
+            <div class="pf-action-box"><div class="pf-action-title">Offer resolution options</div><div class="pf-action-subtitle">Customer Service Team</div></div>
+            <div class="pf-connector"></div>
+            <div class="pf-resolution-buttons">
+              <button class="pf-res-btn" onclick="pfSwitchFlow('tde','resolution'); setTimeout(()=>pfOpenResolution('tde','exchange'),200)">Exchange</button>
+              <button class="pf-res-btn" onclick="pfSwitchFlow('tde','resolution'); setTimeout(()=>pfOpenResolution('tde','storecredit'),200)">Store Credit</button>
+              <button class="pf-res-btn" onclick="pfSwitchFlow('tde','resolution'); setTimeout(()=>pfOpenResolution('tde','refund'),200)">Refund</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TDE: WRONG ITEM -->
+    <div class="pf-flow-panel" id="pf-flow-tde-wrong">
+      <div class="pf-flow">
+        <div class="pf-trigger-box"><div class="pf-trigger-label">Trigger</div><div class="pf-trigger-text">Customer contacts — received wrong item</div></div>
+        <div class="pf-connector"></div>
+        <div class="pf-action-box">
+          <div class="pf-action-title">Request photos of all items received</div><div class="pf-action-subtitle">Customer Service Team</div>
+          <div class="pf-action-buttons">
+            <button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button>
+            <button class="pf-btn-moreinfo" onclick="pfTogglePanel(this,'info')">More Info</button>
+          </div>
+          <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="tde_wrong_photos_template" placeholder="Enter email template here..."></textarea></div>
+          <div class="pf-edit-panel" data-type="info"><div class="pf-edit-panel-label">More Info</div><textarea data-key="tde_wrong_photos_info" placeholder="Error was ours — return and replacement apply regardless of monogram status."></textarea></div>
+        </div>
+        <div class="pf-connector"></div>
+        <div class="pf-action-box">
+          <div class="pf-action-title">Confirm delivery address</div><div class="pf-action-subtitle">Customer Service Team</div>
+          <div class="pf-action-buttons"><button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button></div>
+          <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="tde_wrong_address_template" placeholder="Enter email template here..."></textarea></div>
+        </div>
+        <div class="pf-connector"></div>
+        <button class="pf-tflow-btn-tde" onclick="pfSwitchFlow('tde','returns')">→ Returns Flow</button>
+        <div class="pf-connector"></div>
+        <div class="pf-diamond-wrap"><div class="pf-diamond"><span class="pf-diamond-label">Customer wants replacement?</span></div></div>
+        <div class="pf-branch-row">
+          <div class="pf-branch-col">
+            <div class="pf-branch-label-pill">Yes</div>
+            <button class="pf-res-btn" onclick="pfSwitchFlow('tde','resolution'); setTimeout(()=>pfOpenResolution('tde','replacement'),200)">→ Replacement Flow</button>
+          </div>
+          <div class="pf-branch-col">
+            <div class="pf-branch-label-pill">No</div>
+            <div class="pf-resolution-buttons">
+              <button class="pf-res-btn" onclick="pfSwitchFlow('tde','resolution'); setTimeout(()=>pfOpenResolution('tde','exchange'),200)">Exchange</button>
+              <button class="pf-res-btn" onclick="pfSwitchFlow('tde','resolution'); setTimeout(()=>pfOpenResolution('tde','storecredit'),200)">Store Credit</button>
+              <button class="pf-res-btn" onclick="pfSwitchFlow('tde','resolution'); setTimeout(()=>pfOpenResolution('tde','refund'),200)">Refund</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TDE: MISSING MONOGRAM -->
+    <div class="pf-flow-panel" id="pf-flow-tde-missing-mono">
+      <div class="pf-flow">
+        <div class="pf-trigger-box"><div class="pf-trigger-label">Trigger</div><div class="pf-trigger-text">Missing Monogram — Two Entry Points</div></div>
+        <div class="pf-connector"></div>
+        <div class="pf-dual-entry">
+          <div class="pf-dual-entry-col">
+            <div class="pf-entry-label">Entry A — Warehouse</div>
+            <div class="pf-trigger-box"><div class="pf-trigger-label">Trigger</div><div class="pf-trigger-text" style="font-size:12px;">Warehouse flagged — no monogram applied (before dispatch)</div></div>
+            <div class="pf-connector"></div>
+            <div class="pf-action-box">
+              <div class="pf-action-title">Contact customer to collect monogram details</div><div class="pf-action-subtitle">Customer Service Team</div>
+              <div class="pf-action-buttons"><button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button></div>
+              <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="tde_mono_wh_contact_template" placeholder="Enter email template here..."></textarea></div>
+            </div>
+            <div class="pf-connector"></div>
+            <div class="pf-action-box">
+              <div class="pf-action-title">Confirm details + send to production</div><div class="pf-action-subtitle">CS Team / eCommerce Team / Warehouse</div>
+              <div class="pf-action-buttons"><button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button></div>
+              <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="tde_mono_wh_confirm_template" placeholder="Enter email template here..."></textarea></div>
+            </div>
+            <div class="pf-connector"></div><div class="pf-closed-badge">Ticket Closed</div>
+          </div>
+          <div class="pf-dual-entry-col">
+            <div class="pf-entry-label">Entry B — Customer</div>
+            <div class="pf-trigger-box"><div class="pf-trigger-label">Trigger</div><div class="pf-trigger-text" style="font-size:12px;">Customer contacts — item arrived without monogram</div></div>
+            <div class="pf-connector"></div>
+            <div class="pf-diamond-wrap"><div class="pf-diamond pf-sm"><span class="pf-diamond-label">Who pays return shipping?</span></div></div>
+            <div class="pf-branch-row">
+              <div class="pf-branch-col">
+                <div class="pf-branch-label-pill" style="font-size:9px;">Customer Pays</div>
+                <div class="pf-action-box">
+                  <div class="pf-action-title" style="font-size:12px;">Send return address + update tracker</div>
+                  <div class="pf-action-buttons"><button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button></div>
+                  <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="tde_mono_cust_addr_template" placeholder="Enter email template here..."></textarea></div>
+                </div>
+                <div class="pf-connector"></div>
+                <div class="pf-waiting-box"><div class="pf-waiting-label">Waiting</div><div class="pf-waiting-text" style="font-size:11px;">Wait for return to arrive</div></div>
+              </div>
+              <div class="pf-branch-col">
+                <div class="pf-branch-label-pill" style="font-size:9px;">TDE Pays</div>
+                <button class="pf-tflow-btn-tde" style="font-size:10px;padding:6px 12px;" onclick="pfSwitchFlow('tde','returns')">→ Returns Flow</button>
+              </div>
+            </div>
+            <div class="pf-connector"></div><div class="pf-merge-note">↓ Both branches merge here</div><div class="pf-connector"></div>
+            <div class="pf-action-box">
+              <div class="pf-action-title">Collect monogram details from customer</div><div class="pf-action-subtitle">Customer Service Team</div>
+              <div class="pf-action-buttons">
+                <button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button>
+                <button class="pf-btn-moreinfo" onclick="pfTogglePanel(this,'info')">More Info</button>
+              </div>
+              <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="tde_mono_cust_details_template" placeholder="Enter email template here..."></textarea></div>
+              <div class="pf-edit-panel" data-type="info"><div class="pf-edit-panel-label">More Info</div><textarea data-key="tde_mono_cust_details_info" placeholder="AU = TDE pays, international = customer pays, exceptions = common sense / escalate to TDE Manager.&#10;Details to collect: Text, Font (Serif/Sans), Size (24pt/36pt), Position, Colour (Gold/Silver/Blind)"></textarea></div>
+            </div>
+            <div class="pf-connector"></div>
+            <div class="pf-action-box">
+              <div class="pf-action-title">Confirm details + send to production</div><div class="pf-action-subtitle">CS Team / eCommerce Team / Warehouse</div>
+              <div class="pf-action-buttons"><button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button></div>
+              <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="tde_mono_cust_confirm_template" placeholder="Enter email template here..."></textarea></div>
+            </div>
+            <div class="pf-connector"></div><div class="pf-closed-badge">Ticket Closed</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TDE: RETURN TO SENDER -->
+    <div class="pf-flow-panel" id="pf-flow-tde-rts">
+      <div class="pf-flow">
+        <div class="pf-trigger-box"><div class="pf-trigger-label">Trigger</div><div class="pf-trigger-text">Package returned undelivered</div></div>
+        <div class="pf-connector"></div>
+        <div class="pf-action-box">
+          <div class="pf-action-title">Contact customer + log in CS Tickets</div><div class="pf-action-subtitle">Customer Service Team · Log as "Daily Unknown" if no ID in parcel</div>
+          <div class="pf-action-buttons">
+            <button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button>
+            <button class="pf-btn-moreinfo" onclick="pfTogglePanel(this,'info')">More Info</button>
+          </div>
+          <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="tde_rts_contact_template" placeholder="Enter email template here..."></textarea></div>
+          <div class="pf-edit-panel" data-type="info"><div class="pf-edit-panel-label">More Info</div><textarea data-key="tde_rts_contact_info" placeholder="If monogrammed, no refund option."></textarea></div>
+        </div>
+        <div class="pf-connector"></div>
+        <div class="pf-diamond-wrap"><div class="pf-diamond"><span class="pf-diamond-label">Customer situation?</span></div></div>
+        <div class="pf-branch-row">
+          <div class="pf-branch-col">
+            <div class="pf-branch-label-pill">Australia — 1st Time</div>
+            <div class="pf-action-box">
+              <div class="pf-action-title">Re-ship free as goodwill</div><div class="pf-action-subtitle">eCommerce Team</div>
+              <div class="pf-action-buttons"><button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button></div>
+              <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="tde_rts_au1_template" placeholder="Enter email template here..."></textarea></div>
+            </div>
+            <div class="pf-connector"></div><div class="pf-closed-badge">Ticket Closed</div>
+          </div>
+          <div class="pf-branch-col">
+            <div class="pf-branch-label-pill">International</div>
+            <div class="pf-action-box">
+              <div class="pf-action-title">Customer pays re-shipping cost</div><div class="pf-action-subtitle">Customer Service Team</div>
+              <div class="pf-action-buttons"><button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button></div>
+              <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="tde_rts_intl_template" placeholder="Enter email template here..."></textarea></div>
+            </div>
+            <div class="pf-connector"></div><div class="pf-closed-badge">Ticket Closed</div>
+          </div>
+          <div class="pf-branch-col">
+            <div class="pf-branch-label-pill">2nd Time — Any Location</div>
+            <div class="pf-action-box">
+              <div class="pf-action-title">Customer pays all re-shipping costs</div><div class="pf-action-subtitle">Customer Service Team</div>
+              <div class="pf-action-buttons"><button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button></div>
+              <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="tde_rts_2nd_template" placeholder="Enter email template here..."></textarea></div>
+            </div>
+            <div class="pf-connector"></div><div class="pf-closed-badge">Ticket Closed</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TDE: DAILY UNKNOWN -->
+    <div class="pf-flow-panel" id="pf-flow-tde-daily-unknown">
+      <div class="pf-flow">
+        <div class="pf-trigger-box"><div class="pf-trigger-label">Trigger</div><div class="pf-trigger-text">Package arrives with no customer identification</div></div>
+        <div class="pf-connector"></div>
+        <div class="pf-action-box">
+          <div class="pf-action-title">Log as "Daily Unknown" in CS Tickets</div><div class="pf-action-subtitle">Customer Service Team</div>
+          <div class="pf-action-buttons"><button class="pf-btn-moreinfo" onclick="pfTogglePanel(this,'info')">More Info</button></div>
+          <div class="pf-edit-panel" data-type="info"><div class="pf-edit-panel-label">More Info</div><textarea data-key="tde_unknown_log_info" placeholder="Include SKU + check origin with Aus Post. Monogram text on item can help identify customer."></textarea></div>
+        </div>
+        <div class="pf-connector"></div>
+        <div class="pf-waiting-box"><div class="pf-waiting-label">Waiting</div><div class="pf-waiting-text">Wait for customer to contact</div></div>
+        <div class="pf-connector"></div>
+        <div class="pf-action-box">
+          <div class="pf-action-title">Identify return via log + confirm details</div><div class="pf-action-subtitle">Customer Service Team</div>
+          <div class="pf-action-buttons">
+            <button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button>
+            <button class="pf-btn-moreinfo" onclick="pfTogglePanel(this,'info')">More Info</button>
+          </div>
+          <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="tde_unknown_identify_template" placeholder="Enter email template here..."></textarea></div>
+          <div class="pf-edit-panel" data-type="info"><div class="pf-edit-panel-label">More Info</div><textarea data-key="tde_unknown_identify_info" placeholder="Add notes here..."></textarea></div>
+        </div>
+        <div class="pf-connector"></div>
+        <div class="pf-action-box"><div class="pf-action-title">Update CS Tickets with customer details</div><div class="pf-action-subtitle">Customer Service Team</div></div>
+        <div class="pf-connector"></div>
+        <button class="pf-tflow-btn-tde" onclick="pfSwitchFlow('tde','resolution')">→ Resolution Flow</button>
+      </div>
+    </div>
+
+    <!-- TDE: RESOLUTION -->
+    <div class="pf-flow-panel" id="pf-flow-tde-resolution">
+      <div class="pf-flow">
+        <div class="pf-trigger-box"><div class="pf-trigger-label">Resolution Hub</div><div class="pf-trigger-text">Select a resolution type to view its flow</div></div>
+        <div class="pf-connector"></div>
+        <div class="pf-resolution-buttons">
+          <button class="pf-res-btn" id="pf-res-btn-tde-replacement" onclick="pfOpenResolution('tde','replacement')">Replacement</button>
+          <button class="pf-res-btn" id="pf-res-btn-tde-exchange" onclick="pfOpenResolution('tde','exchange')">Exchange</button>
+          <button class="pf-res-btn" id="pf-res-btn-tde-storecredit" onclick="pfOpenResolution('tde','storecredit')">Store Credit</button>
+          <button class="pf-res-btn" id="pf-res-btn-tde-refund" onclick="pfOpenResolution('tde','refund')">Refund</button>
+        </div>
+        <div class="pf-res-subflow" id="pf-res-tde-replacement">
+          <div class="pf-connector"></div><div class="pf-section-title">Replacement Flow</div><div class="pf-connector"></div>
+          <div class="pf-diamond-wrap"><div class="pf-diamond"><span class="pf-diamond-label">Same item or different?</span></div></div>
+          <div class="pf-branch-row">
+            <div class="pf-branch-col">
+              <div class="pf-branch-label-pill">Same Item</div>
+              <div class="pf-action-box">
+                <div class="pf-action-title">Confirm delivery address + monogram details</div><div class="pf-action-subtitle">Customer Service Team</div>
+                <div class="pf-action-buttons"><button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button></div>
+                <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="tde_rep_same_addr_template" placeholder="Enter email template here..."></textarea></div>
+              </div>
+              <div class="pf-connector"></div>
+              <div class="pf-action-box"><div class="pf-action-title">Arrange dispatch</div><div class="pf-action-subtitle">eCommerce Team</div></div>
+              <div class="pf-connector"></div><div class="pf-merge-note">↓ Merge below</div>
+            </div>
+            <div class="pf-branch-col">
+              <div class="pf-branch-label-pill">Different Item</div>
+              <div class="pf-action-box"><div class="pf-action-title">Check price difference</div><div class="pf-action-subtitle">CS / eCommerce Team</div></div>
+              <div class="pf-connector"></div>
+              <div class="pf-action-box">
+                <div class="pf-action-title">Send invoice if price difference exists</div><div class="pf-action-subtitle">eCommerce Team</div>
+                <div class="pf-action-buttons"><button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button></div>
+                <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="tde_rep_diff_invoice_template" placeholder="Enter email template here..."></textarea></div>
+              </div>
+              <div class="pf-connector"></div>
+              <div class="pf-action-box"><div class="pf-action-title">Wait for payment confirmation</div><div class="pf-action-subtitle">eCommerce Team confirms</div></div>
+              <div class="pf-connector"></div>
+              <div class="pf-action-box"><div class="pf-action-title">Arrange dispatch</div><div class="pf-action-subtitle">eCommerce Team</div></div>
+              <div class="pf-connector"></div><div class="pf-merge-note">↓ Merge below</div>
+            </div>
+          </div>
+          <div class="pf-connector"></div>
+          <div class="pf-action-box"><div class="pf-action-title">Customer receives order confirmation + tracking</div><div class="pf-action-subtitle">Automated / eCommerce Team</div></div>
+          <div class="pf-connector"></div><div class="pf-closed-badge">Ticket Closed</div>
+        </div>
+        <div class="pf-res-subflow" id="pf-res-tde-exchange">
+          <div class="pf-connector"></div><div class="pf-section-title">Exchange Flow</div><div class="pf-connector"></div>
+          <div class="pf-action-box">
+            <div class="pf-action-title">Confirm delivery address + item requested</div><div class="pf-action-subtitle">Customer Service Team</div>
+            <div class="pf-action-buttons"><button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button></div>
+            <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="tde_exch_addr_template" placeholder="Enter email template here..."></textarea></div>
+          </div>
+          <div class="pf-connector"></div>
+          <div class="pf-action-box"><div class="pf-action-title">Arrange dispatch of new item</div><div class="pf-action-subtitle">eCommerce Team</div></div>
+          <div class="pf-connector"></div>
+          <div class="pf-action-box"><div class="pf-action-title">Customer receives order confirmation + tracking</div><div class="pf-action-subtitle">Automated / eCommerce Team</div></div>
+          <div class="pf-connector"></div><div class="pf-closed-badge">Ticket Closed</div>
+        </div>
+        <div class="pf-res-subflow" id="pf-res-tde-storecredit">
+          <div class="pf-connector"></div><div class="pf-section-title">Store Credit Flow</div><div class="pf-connector"></div>
+          <div class="pf-action-box">
+            <div class="pf-action-title">Request store credit from eCommerce Team</div><div class="pf-action-subtitle">Customer Service Team → eCommerce Team</div>
+            <div class="pf-action-buttons"><button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button></div>
+            <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="tde_sc_request_template" placeholder="Enter email template here..."></textarea></div>
+          </div>
+          <div class="pf-connector"></div>
+          <div class="pf-action-box"><div class="pf-action-title">eCommerce Team creates credit code + sends to CS</div><div class="pf-action-subtitle">eCommerce Team</div></div>
+          <div class="pf-connector"></div>
+          <div class="pf-action-box">
+            <div class="pf-action-title">Send credit code to customer</div><div class="pf-action-subtitle">Customer Service Team</div>
+            <div class="pf-action-buttons"><button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button></div>
+            <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="tde_sc_send_template" placeholder="Enter email template here..."></textarea></div>
+          </div>
+          <div class="pf-connector"></div><div class="pf-closed-badge">Ticket Closed</div>
+        </div>
+        <div class="pf-res-subflow" id="pf-res-tde-refund">
+          <div class="pf-connector"></div><div class="pf-section-title">Refund Flow</div><div class="pf-connector"></div>
+          <div class="pf-action-box">
+            <div class="pf-action-title">Notify Marc + Finance Team</div><div class="pf-action-subtitle">Customer Service Team</div>
+            <div class="pf-action-buttons"><button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button></div>
+            <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="tde_ref_notify_template" placeholder="Enter email template here..."></textarea></div>
+          </div>
+          <div class="pf-connector"></div>
+          <div class="pf-action-box"><div class="pf-action-title">Marc processes refund via bank transfer</div><div class="pf-action-subtitle">Marc (CEO) · Note: Shopify has an error for TDE — use bank transfer</div></div>
+          <div class="pf-connector"></div>
+          <div class="pf-action-box"><div class="pf-action-title">Finance Team processes in NetSuite</div><div class="pf-action-subtitle">Finance Team</div></div>
+          <div class="pf-connector"></div>
+          <div class="pf-action-box">
+            <div class="pf-action-title">Send refund confirmation to customer</div><div class="pf-action-subtitle">Customer Service Team · 2–3 business days</div>
+            <div class="pf-action-buttons"><button class="pf-btn-template" onclick="pfTogglePanel(this,'template')">Template</button></div>
+            <div class="pf-edit-panel" data-type="template"><div class="pf-edit-panel-label">Template</div><textarea data-key="tde_ref_confirm_template" placeholder="Enter email template here..."></textarea></div>
+          </div>
+          <div class="pf-connector"></div><div class="pf-closed-badge">Ticket Closed</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end pf-brand-tde -->
+</div><!-- end page-flows -->
+
+<!-- ══════════════════════════════════════
+     PAGE: CONTACTS
+══════════════════════════════════════ -->
+<div class="page-panel" id="page-contacts">
+  <div class="contacts-container">
+    <div class="contacts-header">
+      <h2>Contacts</h2>
+      <button class="btn btn-primary" onclick="openContactModal()">+ Add Contact</button>
+    </div>
+    <div class="contacts-grid" id="contactsGrid">
+      <div class="contacts-empty" id="contactsEmpty">No contacts yet. Add your first contact.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD / EDIT CONTACT MODAL -->
+<div class="modal-overlay" id="contactModal">
+  <div class="modal" style="max-width:480px;">
+    <h2 id="contactModalTitle">Add Contact</h2>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>Role / Title *</label>
+        <input type="text" id="cRole" placeholder="e.g. Finance Manager, CEO, Warehouse Lead">
+      </div>
+      <div class="form-group full">
+        <label>Name *</label>
+        <input type="text" id="cName" placeholder="e.g. Penelope">
+      </div>
+      <div class="form-group full">
+        <label>Email *</label>
+        <input type="email" id="cEmail" placeholder="e.g. pnunes@group48.com.au">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeContactModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveContact()">Save Contact</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM DELETE CONTACT -->
+<div class="modal-overlay" id="confirmContactModal">
+  <div class="modal" style="max-width:380px;text-align:center;">
+    <h2>Delete Contact</h2>
+    <p style="font-size:14px;color:#555;margin-bottom:20px;">Are you sure? This cannot be undone.</p>
+    <div class="form-actions" style="justify-content:center;border:none;padding:0;margin:0;">
+      <button class="btn btn-outline" onclick="closeConfirmContact()">Cancel</button>
+      <button class="btn btn-primary" style="background:#991b1b;" onclick="confirmDeleteContact()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════
+// FIREBASE CONFIG
+// ⚠️ Replace with your actual credentials from Firebase Console
+// Project: returns-tracker-g48
+// ══════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "REPLACE_WITH_YOUR_API_KEY",
+  authDomain: "returns-tracker-g48.firebaseapp.com",
+  databaseURL: "https://returns-tracker-g48-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "returns-tracker-g48",
+  storageBucket: "returns-tracker-g48.appspot.com",
+  messagingSenderId: "REPLACE_WITH_MESSAGING_SENDER_ID",
+  appId: "REPLACE_WITH_APP_ID"
+};
+
+// Firebase initialised defensively — app works without credentials (no cloud sync)
+let db, storage, dbRef, firebaseReady = false;
+try {
+  firebase.initializeApp(firebaseConfig);
+  db      = firebase.database();
+  storage = firebase.storage();
+  dbRef   = db.ref('tickets_v2');
+  firebaseReady = true;
+} catch(e) {
+  console.warn('Firebase not configured — running in local-only mode.', e);
+}
+
+// ══════════════════════════════════════
+// EMAILJS CONFIG
+// ⚠️ Replace with your EmailJS credentials
+// Sign up at emailjs.com → create service + template
+// Template variables: {{to_name}}, {{brand}}, {{order}}, {{customer}}, {{amount}}, {{status}}, {{return_type}}
+// ══════════════════════════════════════
+const EMAILJS_PUBLIC_KEY  = 'REPLACE_WITH_YOUR_EMAILJS_PUBLIC_KEY';
+const EMAILJS_SERVICE_ID  = 'REPLACE_WITH_YOUR_SERVICE_ID';
+const EMAILJS_TEMPLATE_ID = 'REPLACE_WITH_YOUR_TEMPLATE_ID';
+
+try { emailjs.init(EMAILJS_PUBLIC_KEY); } catch(e) {}
+
+// ══════════════════════════════════════
+// CONTACTS — declared early so all functions below can use `contacts`
+// ══════════════════════════════════════
+const CONTACTS_KEY = 'cs_hub_contacts_v1';
+let contacts = [];
+let editingContactId  = null;
+let deletingContactId = null;
+
+const NOTIFY_TRIGGER_LABELS = {
+  '':                        'Not linked',
+  'refund_pending':          'Refund Pending',
+  'replacement_in_progress': 'Replacement in Progress',
+  'contact_required':        'Contact Required',
+  'all_status_changes':      'All Status Changes',
+};
+
+function contactsLoad() {
+  try { contacts = JSON.parse(localStorage.getItem(CONTACTS_KEY) || '[]'); } catch(e) { contacts = []; }
+  renderContacts();
+}
+
+function contactsSave() {
+  try { localStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts)); } catch(e) {}
+}
+
+function escHtml(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderContacts() {
+  const grid = document.getElementById('contactsGrid');
+  if (!grid) return;
+  if (!contacts.length) {
+    grid.innerHTML = '<div class="contacts-empty">No contacts yet. Add your first contact.</div>';
+    return;
+  }
+  grid.innerHTML = contacts.map(c => `
+      <div class="contact-card">
+        <div class="contact-role">${escHtml(c.role)}</div>
+        <div class="contact-name">${escHtml(c.name)}</div>
+        <div class="contact-email"><span>✉</span><a href="mailto:${escHtml(c.email)}">${escHtml(c.email)}</a></div>
+        <div class="contact-actions">
+          <button class="btn btn-outline btn-sm" onclick="openContactEdit('${c.id}')">Edit</button>
+          <button class="btn btn-outline btn-sm" style="color:#991b1b;border-color:#fca5a5;" onclick="askDeleteContact('${c.id}')">Delete</button>
+        </div>
+      </div>`).join('');
+}
+
+// Render checkboxes in the ticket form
+function renderNotifyContactsForm(selectedIds = []) {
+  const container = document.getElementById('fNotifyContactsList');
+  if (!container) return;
+  if (!contacts.length) {
+    container.innerHTML = '<span style="font-size:12px;color:#aaa;">No contacts added yet. Add contacts in the Contacts tab.</span>';
+    return;
+  }
+  container.innerHTML = contacts.map(c => `
+    <div class="notify-contact-row">
+      <input type="checkbox" id="nc_${c.id}" value="${c.id}" ${selectedIds.includes(c.id) ? 'checked' : ''}>
+      <label for="nc_${c.id}" style="cursor:pointer;flex:1;">
+        <div class="notify-contact-row-info">
+          <span class="notify-contact-row-name">${escHtml(c.name)}</span>
+          <span class="notify-contact-row-role">${escHtml(c.role)}${c.email ? ' · ' + escHtml(c.email) : ''}</span>
+        </div>
+      </label>
+    </div>`).join('');
+}
+
+window.openContactModal = function() {
+  editingContactId = null;
+  document.getElementById('contactModalTitle').textContent = 'Add Contact';
+  document.getElementById('cRole').value  = '';
+  document.getElementById('cName').value  = '';
+  document.getElementById('cEmail').value = '';
+  document.getElementById('contactModal').classList.add('open');
+};
+
+window.openContactEdit = function(id) {
+  const c = contacts.find(x => x.id === id);
+  if (!c) return;
+  editingContactId = id;
+  document.getElementById('contactModalTitle').textContent = 'Edit Contact';
+  document.getElementById('cRole').value  = c.role  || '';
+  document.getElementById('cName').value  = c.name  || '';
+  document.getElementById('cEmail').value = c.email || '';
+  document.getElementById('contactModal').classList.add('open');
+};
+
+window.closeContactModal = function() {
+  document.getElementById('contactModal').classList.remove('open');
+  editingContactId = null;
+};
+
+window.saveContact = function() {
+  const role  = document.getElementById('cRole').value.trim();
+  const name  = document.getElementById('cName').value.trim();
+  const email = document.getElementById('cEmail').value.trim();
+
+  if (!role || !name || !email) {
+    showToast('Role, Name and Email are required.', 'error');
+    return;
+  }
+  if (editingContactId) {
+    const idx = contacts.findIndex(x => x.id === editingContactId);
+    if (idx > -1) contacts[idx] = { id: editingContactId, role, name, email };
+  } else {
+    contacts.push({ id: uid(), role, name, email });
+  }
+  contactsSave();
+  renderContacts();
+  window.closeContactModal();
+  showToast('Contact saved!', 'success');
+};
+
+window.askDeleteContact = function(id) {
+  deletingContactId = id;
+  document.getElementById('confirmContactModal').classList.add('open');
+};
+window.closeConfirmContact = function() {
+  document.getElementById('confirmContactModal').classList.remove('open');
+  deletingContactId = null;
+};
+window.confirmDeleteContact = function() {
+  contacts = contacts.filter(c => c.id !== deletingContactId);
+  contactsSave();
+  renderContacts();
+  window.closeConfirmContact();
+  showToast('Contact deleted.');
+};
+
+// Helper for future use: returns contacts that should be notified for a given status key
+window.getContactsByTrigger = function(triggerKey) {
+  return contacts.filter(c => c.notifyTrigger === triggerKey || c.notifyTrigger === 'all_status_changes');
+};
+
+['contactModal','confirmContactModal'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('open'); });
+});
+
+// ══════════════════════════════════════
+// STATE
+// ══════════════════════════════════════
+let tickets    = [];
+let editingId  = null;
+let deletingId = null;
+let viewingId  = null;
+let showClosed = false;
+
+// ══════════════════════════════════════
+// FIREBASE LISTENERS
+// ══════════════════════════════════════
+if (firebaseReady) {
+  dbRef.on('value', snap => {
+    const data = snap.val() || {};
+    tickets = Object.values(data).filter(Boolean);
+    tickets.sort((a, b) => b.createdAt - a.createdAt);
+    render();
+  }, err => {
+    console.error('Firebase read error:', err);
+    showToast('Firebase connection error — check credentials.', 'error');
+  });
+} else {
+  // Local-only fallback — load from localStorage
+  try { tickets = JSON.parse(localStorage.getItem('tickets_local_v1') || '[]'); } catch(e) { tickets = []; }
+  render();
+}
+
+async function fbSet(entry) {
+  if (firebaseReady) {
+    await dbRef.child(entry.id).set(entry);
+  } else {
+    const idx = tickets.findIndex(t => t.id === entry.id);
+    if (idx > -1) tickets[idx] = entry; else tickets.unshift(entry);
+    try { localStorage.setItem('tickets_local_v1', JSON.stringify(tickets)); } catch(e) {}
+    render();
+  }
+}
+async function fbRemove(id) {
+  if (firebaseReady) {
+    await dbRef.child(id).remove();
+  } else {
+    tickets = tickets.filter(t => t.id !== id);
+    try { localStorage.setItem('tickets_local_v1', JSON.stringify(tickets)); } catch(e) {}
+    render();
+  }
+}
+
+// ══════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' ' + type : '');
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+// ══════════════════════════════════════
+// STATUS HELPERS
+// ══════════════════════════════════════
+const STATUS_LABELS = {
+  awaiting_photos:          'Awaiting Fault Photos',
+  waiting_return:           'Waiting for Return',
+  under_review:             'Under Review',
+  refund_pending:           'Refund Pending',
+  replacement_in_progress:  'Replacement in Progress',
+  contact_required:         'Contact Required',
+  waiting_customer_reply:   'Waiting for Customer Reply',
+  closed:                   'Closed'
+};
+const STATUS_CLASS = {
+  awaiting_photos:          'status-awaiting-photos',
+  waiting_return:           'status-waiting-return',
+  under_review:             'status-under-review',
+  refund_pending:           'status-refund-pending',
+  replacement_in_progress:  'status-replacement-in-progress',
+  contact_required:         'status-contact-required',
+  waiting_customer_reply:   'status-waiting-customer-reply',
+  closed:                   'status-closed'
+};
+const DEFAULT_STATUS = {
+  'Faulty Product':                    'awaiting_photos',
+  'Change of Mind':                    'waiting_return',
+  'Unclaimed / Returned to Sender':    'contact_required',
+  'Wrong Product':                     'waiting_return',
+  'Other':                             'under_review'
+};
+
+function brandBadge(b) {
+  if (b === 'Colette') return '<span class="badge badge-colette">Colette</span>';
+  if (b === 'TDE') return '<span class="badge badge-tde">TDE</span>';
+  return b;
+}
+function typeBadge(t) {
+  const cls = {
+    'Faulty Product':                  'type-faulty',
+    'Change of Mind':                  'type-com',
+    'Unclaimed / Returned to Sender':  'type-unclaimed',
+    'Wrong Product':                   'type-wrong',
+    'Other':                           'type-other'
+  }[t] || 'type-other';
+  return `<span class="badge ${cls}">${t||'—'}</span>`;
+}
+function resBadge(r) {
+  const cls = {
+    'Refund':             'res-money',
+    'Replacement':        'res-replacement',
+    'Store Credit':       'res-credit',
+    'Exchange':           'res-exchange',
+    'Pending Decision':   'res-pending'
+  }[r] || 'res-pending';
+  return `<span class="badge ${cls}">${r||'Pending'}</span>`;
+}
+function statusPill(s) {
+  return `<span class="status-pill ${STATUS_CLASS[s]||''}">${STATUS_LABELS[s]||s}</span>`;
+}
+
+// ══════════════════════════════════════
+// RENDER TABLE
+// ══════════════════════════════════════
+function render() {
+  const brand  = document.getElementById('filterBrand').value;
+  const status = document.getElementById('filterStatus').value;
+  const type   = document.getElementById('filterType').value;
+  const res    = document.getElementById('filterResolution').value;
+  const search = document.getElementById('filterSearch').value.toLowerCase();
+
+  let filtered = tickets.filter(t => {
+    if (!showClosed && t.status === 'closed') return false;
+    if (brand  && t.brand !== brand) return false;
+    if (status && t.status !== status) return false;
+    if (type   && t.returnType !== type) return false;
+    if (res    && t.resolution !== res) return false;
+    if (search) {
+      const hay = (t.order+t.customer+t.email+t.comments+t.customerFeedback).toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+
+  // Summary cards (always exclude closed)
+  const active = tickets.filter(t => t.status !== 'closed');
+  document.getElementById('cTotal').textContent            = active.length;
+  document.getElementById('cAwaitingPhotos').textContent   = active.filter(t => t.status === 'awaiting_photos').length;
+  document.getElementById('cWaitingReturn').textContent    = active.filter(t => t.status === 'waiting_return').length;
+  document.getElementById('cUnderReview').textContent      = active.filter(t => t.status === 'under_review').length;
+  document.getElementById('cRefundPending').textContent    = active.filter(t => t.status === 'refund_pending').length;
+  document.getElementById('cContactRequired').textContent  = active.filter(t => t.status === 'contact_required').length;
+  document.getElementById('cWaitingCustomer').textContent  = active.filter(t => t.status === 'waiting_customer_reply').length;
+
+  const tbody = document.getElementById('ticketsBody');
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="11" class="empty-state">No tickets found</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(t => {
+    const finNote = t.status === 'refund_pending'
+      ? '<span class="finance-note">Awaiting finance to close</span>' : '';
+    return `<tr>
+      <td>${brandBadge(t.brand)}</td>
+      <td><strong>${t.order||'—'}</strong></td>
+      <td>${t.customer||'—'}</td>
+      <td class="cell-email">${t.email||'—'}</td>
+      <td>${t.amount ? '$'+t.amount.replace('$','') : '—'}</td>
+      <td>${t.sku||'—'}</td>
+      <td>${typeBadge(t.returnType)}</td>
+      <td>${resBadge(t.resolution)}</td>
+      <td>${statusPill(t.status)}${finNote}</td>
+      <td class="cell-comments">${t.comments||'—'}</td>
+      <td>
+        <div class="actions">
+          <button class="btn-icon" title="View" onclick="openView('${t.id}')">👁</button>
+          <button class="btn-icon" title="Edit" onclick="openEdit('${t.id}')">✏️</button>
+          <button class="btn-icon btn-delete" title="Delete" onclick="askDelete('${t.id}')">🗑</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════
+// TOGGLE SHOW CLOSED
+// ══════════════════════════════════════
+function toggleShowClosed() {
+  showClosed = !showClosed;
+  document.getElementById('btnShowClosed').classList.toggle('active', showClosed);
+  render();
+}
+
+// ══════════════════════════════════════
+// CONDITIONAL FIELDS
+// ══════════════════════════════════════
+window.onReturnTypeChange = function() {
+  const type = document.getElementById('fReturnType').value;
+  const isFaulty = type === 'Faulty Product';
+  const isCOM    = type === 'Change of Mind';
+
+  document.getElementById('faultDescGroup').classList.toggle('visible', isFaulty);
+  document.getElementById('returnRequiredGroup').classList.toggle('visible', isFaulty);
+  document.getElementById('reasonGroup').classList.toggle('visible', isCOM);
+
+  if (!editingId && DEFAULT_STATUS[type]) {
+    document.getElementById('fStatus').value = DEFAULT_STATUS[type];
+  }
+};
+
+window.onResolutionChange = function() {
+  const show = document.getElementById('fResolution').value === 'Replacement';
+  document.getElementById('replacementSkuGroup').classList.toggle('visible', show);
+  if (!show) document.getElementById('fReplacementSku').value = '';
+};
+
+// ══════════════════════════════════════
+// ADD/EDIT MODAL
+// ══════════════════════════════════════
+window.openModal = function() {
+  editingId = null;
+  document.getElementById('modalTitle').textContent = 'Add Ticket';
+  clearForm();
+  renderNotifyContactsForm([]);
+  document.getElementById('formModal').classList.add('open');
+};
+
+window.openEdit = function(id) {
+  const t = tickets.find(x => x.id === id);
+  if (!t) return;
+  editingId = id;
+  document.getElementById('modalTitle').textContent = 'Edit Ticket';
+
+  document.getElementById('fBrand').value            = t.brand || '';
+  document.getElementById('fOrder').value            = t.order || '';
+  document.getElementById('fCustomer').value         = t.customer || '';
+  document.getElementById('fEmail').value            = t.email || '';
+  document.getElementById('fAmount').value           = t.amount || '';
+  document.getElementById('fSku').value              = t.sku || '';
+  document.getElementById('fReturnType').value       = t.returnType || '';
+  document.getElementById('fFaultDesc').value        = t.faultDesc || '';
+  document.getElementById('fReturnRequired').value   = t.returnRequired || '';
+  document.getElementById('fReason').value           = t.reason || '';
+  document.getElementById('fResolution').value       = t.resolution || 'Pending Decision';
+  document.getElementById('fReplacementSku').value   = t.replacementSku || '';
+  document.getElementById('fStatus').value           = t.status || 'waiting_return';
+  document.getElementById('fComments').value         = t.comments || '';
+  document.getElementById('fCustomerFeedback').value = t.customerFeedback || '';
+  document.getElementById('fPhotos').value           = '';
+  document.getElementById('photosNote').textContent  = (t.photoUrls && t.photoUrls.length) ? `${t.photoUrls.length} photo(s) already attached` : '';
+
+  onReturnTypeChange();
+  onResolutionChange();
+  // Restore previously selected notify contacts (only the IDs, not confirmation state)
+  const selectedIds = (t.notifiedContacts || []).map(nc => nc.contactId);
+  renderNotifyContactsForm(selectedIds);
+  document.getElementById('formModal').classList.add('open');
+};
+
+window.closeModal = function() {
+  document.getElementById('formModal').classList.remove('open');
+  editingId = null;
+};
+
+function clearForm() {
+  ['fBrand','fOrder','fCustomer','fEmail','fAmount','fSku','fFaultDesc','fReturnRequired','fReason','fComments','fCustomerFeedback'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('fReturnType').value     = '';
+  document.getElementById('fResolution').value     = 'Pending Decision';
+  document.getElementById('fReplacementSku').value = '';
+  document.getElementById('fStatus').value         = 'waiting_return';
+  document.getElementById('fPhotos').value         = '';
+  document.getElementById('photosNote').textContent = '';
+  ['faultDescGroup','returnRequiredGroup','reasonGroup','replacementSkuGroup'].forEach(id => {
+    document.getElementById(id).classList.remove('visible');
+  });
+}
+
+// ══════════════════════════════════════
+// SAVE → FIREBASE + STORAGE
+// ══════════════════════════════════════
+window.saveEntry = async function() {
+  const brand      = document.getElementById('fBrand').value.trim();
+  const order      = document.getElementById('fOrder').value.trim();
+  const customer   = document.getElementById('fCustomer').value.trim();
+  const email      = document.getElementById('fEmail').value.trim();
+  const returnType = document.getElementById('fReturnType').value;
+
+  if (!brand || !order || !customer || !email || !returnType) {
+    showToast('Brand, Order #, Customer Name, Email and Return Type are required.', 'error');
+    return;
+  }
+
+  const id = editingId || uid();
+  let photoUrls = [];
+
+  // Upload photos to Firebase Storage
+  const photoInput = document.getElementById('fPhotos');
+  if (photoInput.files && photoInput.files.length > 0) {
+    showToast('Uploading photos…');
+    for (const file of photoInput.files) {
+      try {
+        const ref = storage.ref(`tickets/${id}/${Date.now()}_${file.name}`);
+        await ref.put(file);
+        const url = await ref.getDownloadURL();
+        photoUrls.push(url);
+      } catch(e) { console.error('Photo upload failed', e); }
+    }
+  } else if (editingId) {
+    const existing = tickets.find(t => t.id === editingId);
+    photoUrls = existing ? (existing.photoUrls || []) : [];
+  }
+
+  // Collect selected notify contacts from checkboxes
+  const checkedBoxes = document.querySelectorAll('#fNotifyContactsList input[type="checkbox"]:checked');
+  const selectedContactIds = Array.from(checkedBoxes).map(cb => cb.value);
+
+  // Build notifiedContacts array — preserve existing confirmation state for contacts already in the list
+  const existingTicket   = editingId ? tickets.find(t => t.id === editingId) : null;
+  const existingNotified = existingTicket ? (existingTicket.notifiedContacts || []) : [];
+
+  const notifiedContacts = selectedContactIds.map(cid => {
+    const contact  = contacts.find(c => c.id === cid);
+    const existing = existingNotified.find(n => n.contactId === cid);
+    return {
+      contactId:     cid,
+      contactName:   contact ? contact.name  : 'Unknown',
+      contactRole:   contact ? contact.role  : '',
+      contactEmail:  contact ? contact.email : '',
+      notifiedAt:    existing ? existing.notifiedAt : Date.now(), // preserve original notif time
+      confirmed:     existing ? existing.confirmed  : false,
+      confirmedAt:   existing ? existing.confirmedAt : null,
+    };
+  });
+
+  // Detect newly added contacts (not in previous list) — these need email
+  const previousIds  = existingNotified.map(n => n.contactId);
+  const newlyAdded   = notifiedContacts.filter(n => !previousIds.includes(n.contactId));
+
+  const entry = {
+    id,
+    createdAt:        editingId ? (existingTicket?.createdAt || Date.now()) : Date.now(),
+    updatedAt:        Date.now(),
+    brand,
+    order,
+    customer,
+    email,
+    amount:           document.getElementById('fAmount').value.trim(),
+    sku:              document.getElementById('fSku').value.trim(),
+    returnType,
+    faultDesc:        document.getElementById('fFaultDesc').value,
+    returnRequired:   document.getElementById('fReturnRequired').value,
+    reason:           document.getElementById('fReason').value,
+    resolution:       document.getElementById('fResolution').value,
+    replacementSku:   document.getElementById('fReplacementSku').value.trim(),
+    status:           document.getElementById('fStatus').value,
+    comments:         document.getElementById('fComments').value.trim(),
+    customerFeedback: document.getElementById('fCustomerFeedback').value.trim(),
+    photoUrls,
+    notifiedContacts,
+  };
+
+  await fbSet(entry);
+  window.closeModal();
+  showToast('Ticket saved!', 'success');
+
+  // Send EmailJS to newly added contacts
+  if (newlyAdded.length > 0) {
+    let sent = 0;
+    for (const nc of newlyAdded) {
+      if (!nc.contactEmail) continue;
+      try {
+        await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+          to_email:      nc.contactEmail,
+          to_name:       nc.contactName,
+          brand:         entry.brand,
+          order:         entry.order,
+          customer:      entry.customer,
+          amount:        entry.amount || 'N/A',
+          status:        STATUS_LABELS[entry.status] || entry.status,
+          return_type:   entry.returnType,
+        });
+        sent++;
+      } catch(e) {
+        console.error('EmailJS error for', nc.contactName, e);
+      }
+    }
+    if (sent > 0) showToast(`${sent} contact${sent > 1 ? 's' : ''} notified via email ✓`, 'success');
+  }
+};
+
+// ══════════════════════════════════════
+// VIEW MODAL
+// ══════════════════════════════════════
+window.openView = function(id) {
+  const t = tickets.find(x => x.id === id);
+  if (!t) return;
+  viewingId = id;
+
+  const created = t.createdAt ? new Date(t.createdAt).toLocaleDateString('en-AU', {day:'2-digit',month:'short',year:'numeric'}) : '—';
+  const updated = t.updatedAt ? new Date(t.updatedAt).toLocaleDateString('en-AU', {day:'2-digit',month:'short',year:'numeric'}) : '—';
+
+  let photosHtml = '';
+  if (t.photoUrls && t.photoUrls.length) {
+    photosHtml = `<div class="photos-grid">${t.photoUrls.map(url =>
+      `<img class="photo-thumb" src="${url}" onclick="openLightbox('${url}')" alt="Ticket photo">`
+    ).join('')}</div>`;
+  } else {
+    photosHtml = '<span style="font-size:12px;color:#aaa;">No photos attached</span>';
+  }
+
+  const conditionalFields = [];
+  if (t.faultDesc) conditionalFields.push(`<div class="view-field"><div class="view-label">Fault Description</div><div class="view-value">${t.faultDesc}</div></div>`);
+  if (t.returnRequired) conditionalFields.push(`<div class="view-field"><div class="view-label">Return Required?</div><div class="view-value">${t.returnRequired}</div></div>`);
+  if (t.reason) conditionalFields.push(`<div class="view-field"><div class="view-label">Reason to Return</div><div class="view-value">${t.reason}</div></div>`);
+  if (t.replacementSku) conditionalFields.push(`<div class="view-field"><div class="view-label">Replacement SKU</div><div class="view-value">${t.replacementSku}</div></div>`);
+
+  // Build notifications section
+  let notifHtml = '';
+  if (t.notifiedContacts && t.notifiedContacts.length) {
+    const items = t.notifiedContacts.map(nc => {
+      const notifDate = nc.notifiedAt ? new Date(nc.notifiedAt).toLocaleDateString('en-AU', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+      if (nc.confirmed) {
+        const confDate = nc.confirmedAt ? new Date(nc.confirmedAt).toLocaleDateString('en-AU', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+        return `
+          <div class="notif-item">
+            <div class="notif-item-info">
+              <div class="notif-item-name">${escHtml(nc.contactName)}</div>
+              <div class="notif-item-role">${escHtml(nc.contactRole)} · Notified ${notifDate}</div>
+            </div>
+            <div class="notif-item-status">
+              <span class="notif-confirmed">✅ Action confirmed${confDate ? ' · ' + confDate : ''}</span>
+            </div>
+          </div>`;
+      } else {
+        return `
+          <div class="notif-item">
+            <div class="notif-item-info">
+              <div class="notif-item-name">${escHtml(nc.contactName)}</div>
+              <div class="notif-item-role">${escHtml(nc.contactRole)} · Notified ${notifDate}</div>
+            </div>
+            <div class="notif-item-status">
+              <span class="notif-pending">🔔 Pending</span>
+              <button class="btn-confirm-action" onclick="confirmContactAction('${t.id}','${nc.contactId}')">Confirm Action</button>
+            </div>
+          </div>`;
+      }
+    }).join('');
+    notifHtml = `<div class="notif-list">${items}</div>`;
+  } else {
+    notifHtml = '<span style="font-size:12px;color:#aaa;">No contacts notified for this ticket.</span>';
+  }
+
+  document.getElementById('viewContent').innerHTML = `
+    <div class="view-field"><div class="view-label">Brand</div><div class="view-value">${brandBadge(t.brand)}</div></div>
+    <div class="view-field"><div class="view-label">Order #</div><div class="view-value"><strong>${t.order||'—'}</strong></div></div>
+    <div class="view-field"><div class="view-label">Customer Name</div><div class="view-value">${t.customer||'—'}</div></div>
+    <div class="view-field"><div class="view-label">Customer Email</div><div class="view-value">${t.email||'—'}</div></div>
+    <div class="view-field"><div class="view-label">Amount</div><div class="view-value">${t.amount ? '$'+t.amount.replace('$','') : '—'}</div></div>
+    <div class="view-field"><div class="view-label">SKU</div><div class="view-value">${t.sku||'—'}</div></div>
+    <div class="view-divider"></div>
+    <div class="view-field"><div class="view-label">Return Type</div><div class="view-value">${typeBadge(t.returnType)}</div></div>
+    ${conditionalFields.join('')}
+    <div class="view-field"><div class="view-label">Resolution</div><div class="view-value">${resBadge(t.resolution)}</div></div>
+    <div class="view-field full"><div class="view-label">Status</div><div class="view-value">${statusPill(t.status)}</div></div>
+    <div class="view-divider"></div>
+    <div class="view-field full"><div class="view-label">Notified Contacts</div><div class="view-value">${notifHtml}</div></div>
+    <div class="view-divider"></div>
+    <div class="view-field full"><div class="view-label">Internal Comments</div><div class="view-value">${t.comments||'—'}</div></div>
+    <div class="view-field full"><div class="view-label">Customer Feedback</div><div class="view-value">${t.customerFeedback||'—'}</div></div>
+    <div class="view-divider"></div>
+    <div class="view-field full"><div class="view-label">Photos</div><div class="view-value">${photosHtml}</div></div>
+    <div class="view-divider"></div>
+    <div class="view-field"><div class="view-label">Created</div><div class="view-value">${created}</div></div>
+    <div class="view-field"><div class="view-label">Last Updated</div><div class="view-value">${updated}</div></div>
+  `;
+
+  document.getElementById('viewEditBtn').onclick = () => { closeViewModal(); openEdit(id); };
+  document.getElementById('viewModal').classList.add('open');
+};
+
+window.closeViewModal = function() {
+  document.getElementById('viewModal').classList.remove('open');
+  viewingId = null;
+};
+
+// ══════════════════════════════════════
+// CONFIRM CONTACT ACTION
+// Called when a notified contact clicks "Confirm Action" in the View modal
+// ══════════════════════════════════════
+window.confirmContactAction = async function(ticketId, contactId) {
+  const t = tickets.find(x => x.id === ticketId);
+  if (!t || !t.notifiedContacts) return;
+
+  const updated = t.notifiedContacts.map(nc => {
+    if (nc.contactId === contactId) {
+      return { ...nc, confirmed: true, confirmedAt: Date.now() };
+    }
+    return nc;
+  });
+
+  await dbRef.child(ticketId).update({ notifiedContacts: updated, updatedAt: Date.now() });
+  showToast('Action confirmed ✓', 'success');
+  // Re-open view to refresh the UI
+  setTimeout(() => openView(ticketId), 300);
+};
+
+// ══════════════════════════════════════
+// LIGHTBOX
+// ══════════════════════════════════════
+window.openLightbox = function(url) {
+  document.getElementById('lightboxImg').src = url;
+  document.getElementById('lightbox').classList.add('open');
+};
+window.closeLightbox = function() {
+  document.getElementById('lightbox').classList.remove('open');
+};
+
+// ══════════════════════════════════════
+// DELETE
+// ══════════════════════════════════════
+window.askDelete = function(id) {
+  deletingId = id;
+  document.getElementById('confirmModal').classList.add('open');
+};
+window.closeConfirm = function() {
+  document.getElementById('confirmModal').classList.remove('open');
+  deletingId = null;
+};
+window.confirmDelete = async function() {
+  await fbRemove(deletingId);
+  window.closeConfirm();
+  showToast('Ticket deleted.');
+};
+
+// ══════════════════════════════════════
+// FILTERS
+// ══════════════════════════════════════
+window.clearFilters = function() {
+  ['filterBrand','filterStatus','filterType','filterResolution'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('filterSearch').value = '';
+  render();
+};
+
+// Close modals on overlay click
+['formModal','viewModal','confirmModal'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('open');
+  });
+});
+
+// ══════════════════════════════════════
+// PAGE NAVIGATION
+// ══════════════════════════════════════
+window.switchPage = function(page) {
+  document.getElementById('page-tickets').classList.toggle('active', page === 'tickets');
+  document.getElementById('page-flows').classList.toggle('active', page === 'flows');
+  document.getElementById('page-contacts').classList.toggle('active', page === 'contacts');
+
+  const navTickets  = document.getElementById('nav-tickets');
+  const navFlows    = document.getElementById('nav-flows');
+  const navContacts = document.getElementById('nav-contacts');
+
+  navTickets.className  = 'nav-btn' + (page === 'tickets'  ? ' active-tickets'  : '');
+  navContacts.className = 'nav-btn' + (page === 'contacts' ? ' active-contacts' : '');
+
+  if (page === 'flows') {
+    const brand = pfCurrentBrand;
+    navFlows.className = 'nav-btn active-flows-' + brand;
+    if (!pfInitialized) { pfSwitchBrand('colette'); pfInitialized = true; }
+  } else {
+    navFlows.className = 'nav-btn';
+  }
+};
+
+// ══════════════════════════════════════
+// PROCESS FLOWS JS
+// ══════════════════════════════════════
+const PF_STORAGE_KEY = 'process_flows_v1';
+let pfCurrentBrand = 'colette';
+let pfInitialized  = false;
+
+function pfSwitchBrand(brand) {
+  pfCurrentBrand = brand;
+  document.getElementById('pf-brand-btn-colette').className = 'pf-brand-tab' + (brand === 'colette' ? ' active-colette' : '');
+  document.getElementById('pf-brand-btn-tde').className     = 'pf-brand-tab' + (brand === 'tde'     ? ' active-tde'     : '');
+  document.querySelectorAll('.pf-brand-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('pf-brand-' + brand).classList.add('active');
+  pfSwitchFlow(brand, brand === 'colette' ? 'faulty' : 'faulty');
+
+  // Update nav highlight
+  const navFlows = document.getElementById('nav-flows');
+  if (navFlows.classList.contains('active-flows-colette') || navFlows.classList.contains('active-flows-tde')) {
+    navFlows.className = 'nav-btn active-flows-' + brand;
+  }
+}
+
+function pfSwitchFlow(brand, flow) {
+  if (brand !== pfCurrentBrand) {
+    pfCurrentBrand = brand;
+    document.getElementById('pf-brand-btn-colette').className = 'pf-brand-tab' + (brand === 'colette' ? ' active-colette' : '');
+    document.getElementById('pf-brand-btn-tde').className     = 'pf-brand-tab' + (brand === 'tde'     ? ' active-tde'     : '');
+    document.querySelectorAll('.pf-brand-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('pf-brand-' + brand).classList.add('active');
+  }
+
+  const activeClass = brand === 'colette' ? 'active-colette' : 'active-tde';
+  const tabBar = document.getElementById('pf-flowtabs-' + brand);
+  tabBar.querySelectorAll('.pf-flow-tab').forEach(t => {
+    t.classList.remove('active-colette', 'active-tde');
+    if (t.dataset.flow === flow) {
+      t.classList.add(activeClass);
+      t.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+  });
+
+  document.querySelectorAll('#pf-brand-' + brand + ' .pf-flow-panel').forEach(p => p.classList.remove('active'));
+  const panel = document.getElementById('pf-flow-' + brand + '-' + flow);
+  if (panel) panel.classList.add('active');
+}
+
+function pfTogglePanel(btn, type) {
+  const box = btn.closest('.pf-action-box') || btn.closest('.pf-tde-default-box');
+  if (!box) return;
+  const panels  = box.querySelectorAll('.pf-edit-panel');
+  const allBtns = box.querySelectorAll('.pf-btn-template, .pf-btn-moreinfo');
+  let target = null;
+  panels.forEach(p => { if (p.dataset.type === type) target = p; });
+  if (!target) return;
+  const wasOpen = target.classList.contains('open');
+  panels.forEach(p => p.classList.remove('open'));
+  allBtns.forEach(b => b.classList.remove('panel-open'));
+  if (!wasOpen) { target.classList.add('open'); btn.classList.add('panel-open'); }
+}
+
+function pfOpenResolution(brand, type) {
+  ['replacement','exchange','storecredit','refund'].forEach(t => {
+    const btn = document.getElementById(`pf-res-btn-${brand}-${t}`);
+    const sf  = document.getElementById(`pf-res-${brand}-${t}`);
+    if (btn) btn.classList.remove('active');
+    if (sf)  sf.classList.remove('open');
+  });
+  const btn = document.getElementById(`pf-res-btn-${brand}-${type}`);
+  const sf  = document.getElementById(`pf-res-${brand}-${type}`);
+  if (btn) btn.classList.add('active');
+  if (sf)  { sf.classList.add('open'); setTimeout(() => sf.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80); }
+}
+
+// ── Persist process flows templates/notes in localStorage ──
+function pfSave() {
+  const data = {};
+  document.querySelectorAll('#page-flows textarea[data-key]').forEach(ta => {
+    data[ta.dataset.key] = ta.value;
+  });
+  try { localStorage.setItem(PF_STORAGE_KEY, JSON.stringify(data)); } catch(e) {}
+}
+function pfLoad() {
+  let data = {};
+  try { data = JSON.parse(localStorage.getItem(PF_STORAGE_KEY) || '{}'); } catch(e) {}
+  document.querySelectorAll('#page-flows textarea[data-key]').forEach(ta => {
+    if (ta.dataset.key in data) ta.value = data[ta.dataset.key];
+  });
+}
+document.addEventListener('input', e => {
+  if (e.target.tagName === 'TEXTAREA' && e.target.dataset.key) pfSave();
+});
+
+// ══════════════════════════════════════
+// INIT
+// ══════════════════════════════════════
+pfLoad();
+contactsLoad();
+</script>
+</body>
+</html>
